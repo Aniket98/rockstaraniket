@@ -1,0 +1,134 @@
+/* ------------------- Body ------------------- */
+body {
+    margin: 0;
+    padding: 0;
+    background-color: #ffffff; /* White background */
+    color: #111111;            /* Dark text for readability */
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 17px;
+    line-height: 1.6;
+}
+
+/* ------------------- Paragraphs ------------------- */
+p {
+    margin-bottom: 1.2em;
+}
+
+/* ------------------- Headings ------------------- */
+h1, h2, h3, h4, h5, h6 {
+    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    font-weight: bold;
+    margin-top: 1.5em;
+    margin-bottom: 0.5em;
+}
+
+/* ------------------- Links ------------------- */
+a {
+    color: #0066cc;
+    text-decoration: underline;
+}
+
+/* ------------------- Strong/Emphasis ------------------- */
+strong {
+    font-weight: bold;
+}
+
+em {
+    font-style: italic;
+}
+
+/* ------------------- Code & Quotes ------------------- */
+pre, blockquote {
+    background-color: #f5f5f5;
+    padding: 10px;
+    border-radius: 4px;
+    overflow-x: auto;
+}
+
+/* ------------------- Images ------------------- */
+img {
+    max-width: 100%;
+    height: auto;
+    display: block;
+    margin: 1em 0;
+}
+
+/* ------------------- Specific Components ------------------- */
+
+#password-validation{
+	position: absolute;
+	z-index: 52;
+	margin: 0;
+	margin-top: 40vh;
+	margin-left: 100px;
+	padding: 0;
+	width: 230px;
+}
+
+        input[type="password"] {
+		display: block;
+            width: 210px;
+		height: 10px;
+		margin: 0 auto;
+            padding: 6px;
+            font-size: 16px;
+            border: 1px solid #ccc;
+            border-radius: 40px;
+            box-sizing: border-box;
+        }
+
+
+        /* Triangle container */
+        .triangle {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background-color: #cc0000; /* Red Hat red */
+            clip-path: polygon(
+                30% 44.2%,   /* Peak (adjustable) */
+                100% 0%,   /* Top righ corner */
+                100% 100%  /* Bottom right corner */
+            );
+	}
+
+/* Slide left animation */
+.slide-left {
+    animation: slideLeft 0.2s forwards;
+}
+
+@keyframes slideLeft {
+    from { transform: translateX(0); opacity: 1; }
+    to { transform: translateX(-100%); opacity: 0; display: none; }
+}
+
+/* Slide right animation */
+.slide-right {
+    animation: slideRight 0.2s forwards;
+}
+
+@keyframes slideRight {
+    from { transform: translateX(0); opacity: 1; }
+    to { transform: translateX(100%); opacity: 0; display: none;}
+}
+
+/* Shake animation */
+.shake {
+    animation: shakeAnim 0.25s ease-in-out 0s 1; /* repeat 3 times */
+}
+
+@keyframes shakeAnim {
+    0% { transform: translateX(0); }
+    25% { transform: translateX(-8px); }
+    50% { transform: translateX(8px); }
+    75% { transform: translateX(-8px); }
+    100% { transform: translateX(0); }
+}
+
+/* Slide up animation */
+.slide-up {
+    animation: slideUp 0.1s ease forwards;
+}
+@keyframes slideUp {
+    from { transform: translateY(400px); opacity: 0; }
+    to   { transform: translateY(0); opacity: 1; }
+}
