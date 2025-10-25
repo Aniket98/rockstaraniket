@@ -1,0 +1,74 @@
+body {
+  background: #0b0c10;
+  color: #c5c6c7;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  margin: 0;
+  font-family: monospace;
+}
+
+.container {
+  text-align: center;
+}
+
+input[type="password"] {
+  background: #1f2833;
+  color: #66fcf1;
+  border: 2px solid #45a29e;
+  border-radius: 8px;
+  padding: 10px 15px;
+  font-size: 1rem;
+  outline: none;
+}
+
+.triangle {
+  margin: 30px auto;
+  width: 0;
+  height: 0;
+  border-left: 50px solid transparent;
+  border-right: 50px solid transparent;
+  border-bottom: 100px solid #45a29e;
+  opacity: 1;
+  transition: transform 0.5s ease, opacity 0.5s ease;
+}
+
+.slide-left {
+  animation: slideLeft 0.6s forwards;
+}
+.slide-right {
+  animation: slideRight 0.6s forwards;
+}
+
+@keyframes slideLeft {
+  to {
+    transform: translateX(-100vw);
+    opacity: 0;
+  }
+}
+@keyframes slideRight {
+  to {
+    transform: translateX(100vw);
+    opacity: 0;
+  }
+}
+
+#protected {
+  opacity: 0;
+  transition: opacity 0.8s ease;
+}
+#protected.slide-up {
+  opacity: 1;
+  transform: translateY(-10px);
+}
+
+.shake {
+  animation: shake 0.5s;
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  20%, 60% { transform: translateX(-8px); }
+  40%, 80% { transform: translateX(8px); }
+}
