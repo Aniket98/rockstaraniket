@@ -5,7 +5,7 @@ window.addEventListener('DOMContentLoaded', function () {
   let protectedDiv = document.getElementById('protected');
 
   // MD5
-  const hashedPassword = "d596618d8e4c569c277096157bf8ecb9";
+  const hashedPassword = "766786aaf872f77ef6f467d3fccd3248";
 
   function ensureProtectedDiv() {
     if (!protectedDiv) {
