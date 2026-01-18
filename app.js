@@ -32,28 +32,10 @@ window.addEventListener('DOMContentLoaded', function () {
       });
   }
 
-  function unlock() {
-    let handled = false;
-
-    const onAnimEnd = () => {
-      if (handled) return;
-      handled = true;
-      loadProtectedHtml();
-    };
-
-    if (triangleDiv) {
-      triangleDiv.addEventListener('animationend', onAnimEnd, { once: true });
-      setTimeout(() => {
-        if (!handled) {
-          handled = true;
-          loadProtectedHtml();
-        }
-      }, 600);
-    }
-
-    validationDiv.classList.add('slide-left');
-    triangleDiv.classList.add('slide-right');
-  }
+function unlock() {
+  validationDiv.classList.add('slide-left');
+  loadProtectedHtml();
+}
 
   function checkPassword() {
     const value = input.value.trim();
