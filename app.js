@@ -4,6 +4,8 @@ window.addEventListener('DOMContentLoaded', function () {
   const triangleDiv = document.querySelector('.triangle');
   let protectedDiv = document.getElementById('protected');
 
+unlock();
+
   // MD5 of your password
   const hashedPassword = "766786aaf872f77ef6f467d3fccd3248";
 
@@ -73,7 +75,7 @@ setTimeout(() => {
     }
   }
 
-  input.focus();
+input.focus();
   input.addEventListener('keydown', e => {
     if (e.key === 'Enter') checkPassword();
   });
