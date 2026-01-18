@@ -18,20 +18,9 @@ input[type="password"] {
   color: #66fcf1;
   border: 2px solid #45a29e;
   border-radius: 8px;
-  padding: 10px 15px;
-  font-size: 1rem;
+  padding: 1px 2px;
+  font-size: 0.9rem;
   outline: none;
-}
-
-.triangle {
-  margin: 30px auto;
-  width: 0;
-  height: 0;
-  border-left: 50px solid transparent;
-  border-right: 50px solid transparent;
-  border-bottom: 100px solid #45a29e;
-  opacity: 1;
-  transition: transform 0.5s ease, opacity 0.5s ease;
 }
 
 .slide-left {
@@ -64,7 +53,7 @@ input[type="password"] {
 }
 
 .shake {
-  animation: shake 0.5s;
+  animation: shake 0.2s;
 }
 
 @keyframes shake {
