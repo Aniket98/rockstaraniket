@@ -1,0 +1,20 @@
+/* This CSS overrides the main css */
+
+body {
+  background: #0b0c10;
+  color: #c5c6c7;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  margin: 0;
+  font-family: monospace;
+}
+
+.container {
+  text-align: center;
+}
+
+#protected{
+  border: 1px solid white;
+}
