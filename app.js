@@ -44,6 +44,11 @@ setTimeout(() => {
   if (oldCss) oldCss.remove();
 
   document.head.appendChild(newCss);
+
+  // Dynamically add new JS for protected content
+const script = document.createElement('script');
+script.src = 'protected.js';  // <-- new JS file
+document.body.appendChild(script);
   
 }, 100); // after slide animation
     })
