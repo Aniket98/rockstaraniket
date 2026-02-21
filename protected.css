@@ -73,12 +73,15 @@ body {
 }
 
 #displayScreen{
-  height: 85vh;
-  width: 85vw;
+  height: 81vh;
+  width: 83vw;
   box-shadow: 0 2px 40px rgba(0,0,0,0.5);
   position: absolute;
   right: 8px;
   bottom: 8px;
+  font-size: 14px;
+  font-weight: 100;
+  padding: 15px;
 }
 
 #navBar{
