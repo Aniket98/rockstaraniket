@@ -4,7 +4,7 @@ window.addEventListener('DOMContentLoaded', function () {
   const triangleDiv = document.querySelector('.triangle');
   let protectedDiv = document.getElementById('protected');
 
-unlock();
+//unlock();
 
   // MD5 of your password
   const hashedPassword = "766786aaf872f77ef6f467d3fccd3248";
