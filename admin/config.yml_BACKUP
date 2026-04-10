@@ -1,6 +1,6 @@
-
 backend:
-  name: git-gateway
+  name: github
+  repo: Aniket98/rockstaraniket
   branch: main
 
 media_folder: "images/uploads"
@@ -16,4 +16,3 @@ collections:
       - { label: "Title", name: "title", widget: "string" }
       - { label: "Date", name: "date", widget: "datetime" }
       - { label: "Body", name: "body", widget: "markdown" }
-
