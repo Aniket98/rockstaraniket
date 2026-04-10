@@ -1,4 +1,2 @@
 title: Rockstar Blog
-theme: jekyll-theme-hacker
-
-permalink: /posts/:title/
+markdown: kramdown
