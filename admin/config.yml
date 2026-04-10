@@ -1,3 +1,4 @@
+site_url: https://stirring-maamoul-0ae72e.netlify.app
 
 backend:
   name: git-gateway
