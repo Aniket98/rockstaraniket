@@ -1,0 +1,8 @@
+title: Rockstar Blog
+markdown: kramdown
+
+collections:
+  posts:
+    output: true
+
+permalink: /posts/:title/
