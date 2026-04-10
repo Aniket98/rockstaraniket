@@ -1,12 +1,29 @@
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <title>Blog</title>
-</head>
-<body>
+---
+layout: default
+title: Blog
+---
 
-<h1>Blog Page Works</h1>
+<h1>Blog</h1>
 
-</body>
-</html>
+<div>
+  <a href="/blog/">All</a>
+  {% assign tags = site.posts | map: "tags" | join: "," | split: "," | uniq %}
+  {% for tag in tags %}
+    <a href="/blog/?tag={{ tag }}">{{ tag }}</a>
+  {% endfor %}
+</div>
+
+<hr>
+
+{% assign selected_tag = page.url | split: 'tag=' | last %}
+
+<ul>
+  {% for post in site.posts %}
+    {% if selected_tag == "" or post.tags contains selected_tag %}
+      <li>
+        <a href="{{ post.url }}">{{ post.title }}</a>
+        <small>{{ post.date | date: "%Y-%m-%d" }}</small>
+      </li>
+    {% endif %}
+  {% endfor %}
+</ul>
