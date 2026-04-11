@@ -3,4 +3,46 @@ title: First Post
 date: 2026-04-11
 ---
 
-Hello Hacker theme blog
+Hello Hacker theme blogi
+
+# Oracle - Relational Database Management System
+
+=================================
+
+A typical Oracle server filesystem looks like this:
+
+/u01
+ └── app
+      ├── oracle        ← owned by oracle user (software lives here)
+      │    └── product
+      │         └── 19c
+      │              └── client_1   ← ORACLE_HOME
+      └── oraInventory ← central inventory (owned by oinstall)
+
+Meaning:
+
+/u01 → mount point reserved for Oracle software (historical Oracle convention)
+app/ → application root
+oracle/ → base directory for Oracle user
+product/19c/... → versioned software installs
+oraInventory → global install registry
+
+Three key terms you will use constantly:
+
+ORACLE_BASE --> Root directory for Oracle software owned by the oracle user.
+Example:
+/u01/app/oracle
+
+
+ORACLE_HOME --> Actual installation location of one Oracle product.
+Example:
+/u01/app/oracle/product/19c/client_1
+
+ORACLE_SID --> Specifies the name of the Oracle Database instance on the host computer.
+Example:
+oracle@10:~> echo $ORACLE_SID
+DBNAME
+
+Inventory is outside ORACLE_BASE intentionally so multiple Oracle homes share it.
+
+==================================
