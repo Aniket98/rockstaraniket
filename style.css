@@ -1,3 +1,4 @@
-body{
-	font-family: "JetBrains Mono", monospace;
+.body {
+  font-family: Consolas, "Courier New", monospace;
+  font-size: 9px;
 }
