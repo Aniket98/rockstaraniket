@@ -46,8 +46,9 @@ function autoUnlockAnimation() {
       clearInterval(typer);
       setTimeout(unlock, 300);
     }
-  }, 80);
+  }, 40);
 }
+//Manual Reset Token: localStorage.removeItem("site_auth_expiry");
 
 function checkPassword() {
   const value = input.value.trim();

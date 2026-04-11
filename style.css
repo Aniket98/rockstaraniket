@@ -18,24 +18,16 @@ pre {
   background: #0b0c10;
   color: #c5c6c7;
   display: flex;
-  justify-content: center;
+  flex-direction: column;
   align-items: center;
   height: 100vh;
-  width: 100vw;
   margin: 0;
   font-family: monospace;
 }
 
-#old-content h3{
-  color: #c5c6c7;
-  font-family: monospace;
-}
-
 .curtain {
+  margin-top: 10px;   /* spacing below heading */
   text-align: center;
-  display: flex;
-  justify-content: center;
-  align-items: center;
 }
 
 .curtain input[type="password"] {
@@ -46,13 +38,6 @@ pre {
   padding: 1px 2px;
   font-size: 0.9rem;
   outline: none;
-}
-
-#password-validation
-{
-  display: flex;
-  justify-content: center;
-  align-items: center;
 }
 
 .slide-left {
