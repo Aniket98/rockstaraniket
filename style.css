@@ -20,20 +20,21 @@ pre {
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
   height: 100vh;
   margin: 0;
   font-family: monospace;
 }
 
 .curtain {
-  margin-top: 10px;   /* spacing below heading */
+  margin-top: -6px;   /* spacing below heading */
   text-align: center;
 }
 
 .curtain input[type="password"] {
-  background: #1f2833;
-  color: #66fcf1;
-  border: 2px solid #45a29e;
+  background: #101407;
+  color: #b5e853;
+  border: 2px solid #b5e853;
   border-radius: 8px;
   padding: 1px 2px;
   font-size: 0.9rem;
