@@ -8,5 +8,6 @@ kramdown:
 collections:
   oracle:
     output: true
+    permalink: /oracle/:name/
   postgres:
     output: true
