@@ -15,6 +15,17 @@
 
   <body>
 
+<div id="old-content">
+  <h2>The Legendary Life of Aniket</h2>
+  <div class="curtain">
+    <div id="password-validation">
+      <input type="password" id="passwordInput" placeholder="Enter password" autocomplete="off" />
+    </div>
+  </div>
+</div>
+
+<div id="protected">
+
     <header>
       <div class="container">
         <a id="a-title" href="{{ '/' | relative_url }}">
@@ -39,5 +50,10 @@
         {{ content }}
       </section>
     </div>
+
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+
   </body>
 </html>
