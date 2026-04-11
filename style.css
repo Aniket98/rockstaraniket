@@ -26,8 +26,16 @@ pre {
   font-family: monospace;
 }
 
+#old-content h3{
+  color: #c5c6c7;
+  font-family: monospace;
+}
+
 .curtain {
   text-align: center;
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
 
 .curtain input[type="password"] {
@@ -38,6 +46,13 @@ pre {
   padding: 1px 2px;
   font-size: 0.9rem;
   outline: none;
+}
+
+#password-validation
+{
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
 
 .slide-left {
