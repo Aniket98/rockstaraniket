@@ -1,7 +1,8 @@
 // The Password Curtain .js
 
 const TOKEN_KEY = "site_auth_expiry";
-const TOKEN_DURATION = 12 * 60 * 60 * 1000;
+//const TOKEN_DURATION = 12 * 60 * 60 * 1000;
+const TOKEN_DURATION = 30 * 1000;
 const hashedPassword = "6bd2379ddf3baef6ac7f5f65b4a51c07";
 
 const input = document.getElementById('passwordInput');
