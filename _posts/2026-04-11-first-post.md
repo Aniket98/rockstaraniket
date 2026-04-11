@@ -1,9 +1,8 @@
 ---
-title: First Post
-date: 2026-04-11
+title: Oracle - Relational Database Management System
+date: 2026-04-11T15:35:00+05:30
+tags: [oracle,database]
 ---
-
-Hello Hacker theme blogi
 
 # Oracle - Relational Database Management System
 
@@ -36,7 +35,6 @@ Three key terms you will use constantly:
 ORACLE_BASE --> Root directory for Oracle software owned by the oracle user.
 Example:
 /u01/app/oracle
-
 
 ORACLE_HOME --> Actual installation location of one Oracle product.
 Example:

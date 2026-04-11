@@ -2,3 +2,7 @@ body {
   font-family: Consolas, "Courier New", monospace;
   font-size: 14px;
 }
+
+pre {
+  font-size: 12px;
+}
