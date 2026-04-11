@@ -11,6 +11,7 @@ Hello Hacker theme blogi
 
 A typical Oracle server filesystem looks like this:
 
+```
 /u01
  └── app
       ├── oracle        ← owned by oracle user (software lives here)
@@ -18,14 +19,17 @@ A typical Oracle server filesystem looks like this:
       │         └── 19c
       │              └── client_1   ← ORACLE_HOME
       └── oraInventory ← central inventory (owned by oinstall)
+```
 
 Meaning:
 
+```
 /u01 → mount point reserved for Oracle software (historical Oracle convention)
 app/ → application root
 oracle/ → base directory for Oracle user
 product/19c/... → versioned software installs
 oraInventory → global install registry
+```
 
 Three key terms you will use constantly:
 
