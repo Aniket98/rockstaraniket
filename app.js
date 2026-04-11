@@ -2,7 +2,7 @@
 
 const TOKEN_KEY = "site_auth_expiry";
 const TOKEN_DURATION = 12 * 60 * 60 * 1000;
-const hashedPassword = "766786aaf872f77ef6f467d3fccd3248";
+const hashedPassword = "6bd2379ddf3baef6ac7f5f65b4a51c07";
 
 const input = document.getElementById('passwordInput');
 const validationDiv = document.getElementById('password-validation');
