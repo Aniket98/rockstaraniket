@@ -1,6 +1,6 @@
 ---
 title: Oracle - Relational Database Management System
-date: 2026-04-11T15:35:00+05:30
+date: 2026-04-11T15:35:00
 tags: [oracle,database]
 ---
 

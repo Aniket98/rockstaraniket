@@ -4,3 +4,9 @@ theme: jekyll-theme-hacker
 kramdown:
   input: GFM
   hard_wrap: true
+
+collections:
+  oracle:
+    output: true
+  postgres:
+    output: true
