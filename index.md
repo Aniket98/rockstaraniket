@@ -37,9 +37,14 @@ And whenever needed, quickly reference this knowledge base and move to next topi
 
 {% assign now_month = site.time | date: "%Y-%m" %}
 
-{% assign filtered_posts = site.posts
-  | where_exp: "p", "p.date | date: '%Y-%m' == now_month"
-%}
+{% assign filtered_posts = "" | split: "" %}
+
+{% for post in site.posts %}
+  {% assign post_month = post.date | date: "%Y-%m" %}
+  {% if post_month == now_month %}
+    {% assign filtered_posts = filtered_posts | push: post %}
+  {% endif %}
+{% endfor %}
 
 {% if filtered_posts.size > 0 %}
 {% for post in filtered_posts %}

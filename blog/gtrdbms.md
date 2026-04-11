@@ -8,6 +8,8 @@ title: General Theory of RDBMS
 All the RDBMS conceptually work similarly.
 Working on a single database primarily brainwashes the brain.
 
+### Posts
+
 {% assign filtered_posts = site.posts | where_exp: "p", "p.tags contains 'gtrdbms'" %}
 
 {% if filtered_posts.size > 0 %}
