@@ -5,6 +5,8 @@ kramdown:
   input: GFM
   hard_wrap: true
 
+collections_dir: .
+
 collections:
   oracle:
     output: true
