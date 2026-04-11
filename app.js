@@ -1,8 +1,8 @@
 // The Password Curtain .js
 
 const TOKEN_KEY = "site_auth_expiry";
-//const TOKEN_DURATION = 12 * 60 * 60 * 1000;
-const TOKEN_DURATION = 30 * 1000;
+const TOKEN_DURATION = 12 * 60 * 60 * 1000;
+const MAX_LEN = 7;
 const hashedPassword = "6bd2379ddf3baef6ac7f5f65b4a51c07";
 
 const input = document.getElementById('passwordInput');
@@ -30,6 +30,10 @@ function unlock() {
   setTimeout(() => {
     document.getElementById('old-content')?.remove();
   }, 600);
+
+//For mobile zoom-out automatically after entering password
+  document.body.style.zoom = "1";
+  document.documentElement.style.zoom = "1";
 }
 
 function autoUnlockAnimation() {
@@ -75,5 +79,12 @@ document.addEventListener("DOMContentLoaded", () => {
   input.addEventListener('keydown', e => {
     if (e.key === 'Enter') checkPassword();
   });
+
+  input.addEventListener('input', () => {
+    if (input.value.length >= MAX_LEN && !input.disabled) {
+      checkPassword();
+    }
+  });
+
 });
 
