@@ -20,6 +20,8 @@ function isTokenValid() {
 }
 
 function unlock() {
+  input.blur();
+  
   validationDiv.classList.add('slide-left');
   protectedDiv.style.display = "block";  // show first
 
