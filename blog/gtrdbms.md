@@ -38,7 +38,7 @@ Instead as a DBA, one should learn the powers and gaps of each database and be a
 To achieve this ADMINISTRATION of all 4 databases at once, we need an Un-Biased Database Theory.
 I give this theory the name "General Theory of RDBMS".
 
-Initially, the focus on this general theory would be more towards a Troubleshooting Mindset, so it becomes possible to learn & be able to admnister them comparitively faster. In between (& later), as opportunity comes, this general theory will also extend trying to go deeper from a Design Mindset as well.
+Initially, the focus on this general theory would be more towards a Troubleshooting Mindset, so it becomes possible to learn & be able to admnister the databases comparitively faster. In between (& later), as opportunity comes, this general theory will also extend trying to go deeper from a Design Mindset as well.
 
 Below, the GT-RDBMS posts have been listed and will keep adding on:
 
@@ -53,3 +53,6 @@ Below, the GT-RDBMS posts have been listed and will keep adding on:
 {% else %}
 No posts yet.
 {% endif %}
+
+
+#### --------------------------------------------------
