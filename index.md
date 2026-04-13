@@ -42,7 +42,9 @@ And whenever needed, quickly reference this knowledge base and move to next topi
 {% for post in site.posts %}
   {% assign post_month = post.date | date: "%Y-%m" %}
   {% if post_month == now_month %}
-    {% assign filtered_posts = filtered_posts | push: post %}
+    {% unless post.tags and post.tags contains 'wip' %}
+      {% assign filtered_posts = filtered_posts | push: post %}
+    {% endunless %}
   {% endif %}
 {% endfor %}
 
@@ -51,5 +53,5 @@ And whenever needed, quickly reference this knowledge base and move to next topi
 - [{{ post.title }}]({{ post.url }})
 {% endfor %}
 {% else %}
-No posts in this month. You can search older posts from top navigation panel.
+No new posts in this month. You can search older posts from top navigation panel.
 {% endif %}
