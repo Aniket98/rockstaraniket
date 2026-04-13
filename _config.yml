@@ -1,6 +1,8 @@
 title: My Hacker Blog
 theme: jekyll-theme-hacker
 
+future: true
+
 kramdown:
   input: GFM
   hard_wrap: true
