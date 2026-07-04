@@ -3,12 +3,44 @@ AGENTIC AI
 
 Applications:
 
-1. Google AntiGravity or VS Code
+1. Google AntiGravity (myJio App free 1.5 year license) or VS Code
 2. Hugging Face (free)
 3. Windsurf Plugin (free) for VS Code
 4. Llama Model LLM (free)
+5. Google's Agent Development Kit (ADK 2.0): An open-source, code-first, graph-based framework for building AI agents.
+6. Antigravity: Google's agentic IDE, used to describe desired outcomes in natural language while the IDE writes and edits the code.
+7. agents-cli: The command-line toolchain for building, running, evaluating, and deploying ADK agents.
+8. Google AI Studio: https://aistudio.google.com/
+9. Groq (not Grok): https://groq.com/
 
 Learning Links:
 
 1. Learn AntiGravity - https://codelabs.developers.google.com/getting-started-google-antigravity#0
 2. Learn MCP (Model Context Protocol) - https://cloud.google.com/discover/what-is-model-context-protocol
+3. Configuring MCP in AntiGravity - https://antigravity.google/docs/mcp#connecting-custom-mcp-servers
+	|_ Custom MCP can be configured in file: mcp_config.json
+4. Google TRAINING: 5-Day AI Agents: Intensive Vibe Coding Course With Google!
+	|_ https://developers.google.com/profile/badges/events/cloud/five-day-ai-agents/award
+	|_ https://www.kaggle.com/competitions/5-day-ai-agents-intensive-vibecoding-course-with-google/overview
+
+========= LLAMA LLM =============
+
+1. https://dev.to/ajitkumar/the-complete-guide-to-ollama-run-large-language-models-locally-2mge
+
+Download Ollama:
+		|_ curl -fsSL https://ollama.com/install.sh | sh
+		|_ ollama run <model>:Xb
+				<model> is model name with version number - example: llama3.2:3b or llama3.1:4b or llama 3.1:8b
+						Important: Don't think llama 3.2 is better than 3.1 - Actually 3.1 is more better so read these before deciding whcih model to use
+						Other point: The higher number of Xb the better and deep resoning answers are given by model
+				(b stands for billion - X billion number of parameter weights that were used to train model by model provider)
+		|_ ollama list
+		|_ ollama help
+				Note: Temperature value controls the creativeness of the model - Lower is not bad, lower is better if you want more deterministics answers as it becomes less creative and more straight thinking.
+
+======== AntiGravity ==========
+
+Download AntiGravity:
+		|_ Main Software: https://antigravity.google/download
+		|_ Download Only CLI: curl -fsSL https://antigravity.google/cli/install.sh | bash
+

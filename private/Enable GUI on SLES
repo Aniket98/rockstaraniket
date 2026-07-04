@@ -1,0 +1,42 @@
+Enable GUI on SLES
+==========================
+
+
+# 1. Force register the module using lowercase letters
+sudo SUSEConnect -p sle-module-desktop-applications/15.5/x86_64
+
+# 2. Refresh your system repository cache
+sudo zypper refresh
+
+# 3. Install the graphical desktop pattern
+sudo zypper in -t pattern gnome
+
+# 4. Set the system to boot into the desktop interface
+sudo systemctl set-default graphical.target
+
+# 5. Launch the desktop login manager screen
+sudo systemctl start display-manager
+
+
+========== If SUSE License expired, install the OpenSUSE packages =============
+
+# 1. Clean out the broken/expired SUSE subscription repositories
+sudo zypper removerepo --all
+
+# 2. Add the free openSUSE Leap 15.5 Main and Update repositories
+sudo zypper addrepo -f http://download.opensuse.org/distribution/leap/15.5/repo/oss/ free-base-oss
+sudo zypper addrepo -f http://opensuse.org free-update-oss
+
+(if need to reinstall them, remove them first):
+	|_ sudo zypper removerepo repo-oss repo-update opensuse-oss opensuse-updates
+
+# 3. Clean all old metadata and pull from the new free paths
+sudo zypper clean -a
+sudo zypper --no-gpg-checks refresh
+
+# 4. Install the GNOME Desktop using openSUSE's pattern name
+sudo zypper in -t pattern gnome
+
+# 5. Route the system boot sequence to launch the GUI
+sudo systemctl set-default graphical.target
+sudo systemctl start display-manager

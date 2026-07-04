@@ -1,0 +1,30 @@
+Update Hostname of Linux
+============================
+
+============================================================
+           INSTRUCTIONS: CHANGE SLES HOSTNAME
+============================================================
+
+1. CHECK CURRENT HOSTNAME
+   Run this command to see your current setup:
+   $ hostnamectl
+
+2. SET NEW HOSTNAME
+   Apply your new name instantly and permanently:
+   $ sudo hostnamectl set-hostname your-new-hostname
+   
+   *(Replace "your-new-hostname" with your actual name)*
+
+3. UPDATE THE HOSTS FILE
+   Open the configuration file in a text editor:
+   $ sudo vi /etc/hosts
+   
+   -> Find any instances of your old hostname.
+   -> Replace them with your new hostname.
+   -> Save and exit the file.
+
+4. VERIFY THE CHANGES
+   Confirm the network system accepted the update:
+   $ hostnamectl
+
+============================================================
