@@ -1,0 +1,1120 @@
+Testing the pg_repack to unbloat postgres tables
+====================================================
+
+
+=================== Official Docs =================
+
+1. https://github.com/reorg/pg_repack
+2. Detailed official documentation: https://reorg.github.io/pg_repack/
+
+NOTICE:
+
+a. Only superusers or owners of tables and indexes can use the utility. To run pg_repack as an owner you need to use the option --no-superuser-check.
+b. Target table must have a PRIMARY KEY, or at least a UNIQUE total index on a NOT NULL column.
+
+REQUIREMENTS:
+
+PostgreSQL versions : PostgreSQL 9.5, 9.6, 10, 11, 12, 13, 14, 15, 16, 17, 18.
+(PostgreSQL 9.4 and before it are not supported.)
+
+Disks : Performing a full-table repack requires free disk space about twice as large as the target table(s) and its indexes. For example, if the total size of the tables and indexes to be reorganized is 1GB, an additional 2GB of disk space is required.
+
++ For other limitations, read above documentation.
+
+==================== Installing and testing ==================
+
+[root@rocky810 ~]# dnf search pg_repack
+Last metadata expiration check: 0:00:40 ago on Sunday 05 July 2026 03:02:12 PM IST.
+============================================================================= Name & Summary Matched: pg_repack =============================================================================
+pg_repack_14-llvmjit.x86_64 : Just-in-time compilation support for pg_repack
+pg_repack_15-llvmjit.x86_64 : Just-in-time compilation support for pg_repack
+pg_repack_16-llvmjit.x86_64 : Just-in-time compilation support for pg_repack
+pg_repack_17-llvmjit.x86_64 : Just-in-time compilation support for pg_repack
+pg_repack_18-llvmjit.x86_64 : Just-in-time compilation support for pg_repack
+================================================================================== Name Matched: pg_repack ==================================================================================
+pg_repack_14.x86_64 : Reorganize tables in PostgreSQL databases without any locks
+pg_repack_15.x86_64 : Reorganize tables in PostgreSQL databases without any locks
+pg_repack_16.x86_64 : Reorganize tables in PostgreSQL databases without any locks
+pg_repack_17.x86_64 : Reorganize tables in PostgreSQL databases without any locks
+pg_repack_18.x86_64 : Reorganize tables in PostgreSQL databases without any locks
+[root@rocky810 ~]#
+[root@rocky810 ~]#
+[root@rocky810 ~]# dnf install pg_repack_14
+Last metadata expiration check: 0:01:31 ago on Sunday 05 July 2026 03:02:12 PM IST.
+Dependencies resolved.
+=============================================================================================================================================================================================
+ Package                                        Architecture                             Version                                              Repository                                Size
+=============================================================================================================================================================================================
+Installing:
+ pg_repack_14                                   x86_64                                   1.5.3-1PGDG.rhel8                                    pgdg14                                    75 k
+
+Transaction Summary
+=============================================================================================================================================================================================
+Install  1 Package
+
+Total download size: 75 k
+Installed size: 173 k
+Is this ok [y/N]: y
+Downloading Packages:
+pg_repack_14-1.5.3-1PGDG.rhel8.x86_64.rpm                                                                                                                     17 kB/s |  75 kB     00:04
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Total                                                                                                                                                         17 kB/s |  75 kB     00:04
+Running transaction check
+Transaction check succeeded.
+Running transaction test
+Transaction test succeeded.
+Running transaction
+  Preparing        :                                                                                                                                                                     1/1
+  Installing       : pg_repack_14-1.5.3-1PGDG.rhel8.x86_64                                                                                                                               1/1
+  Running scriptlet: pg_repack_14-1.5.3-1PGDG.rhel8.x86_64                                                                                                                               1/1
+  Verifying        : pg_repack_14-1.5.3-1PGDG.rhel8.x86_64                                                                                                                               1/1
+
+Installed:
+  pg_repack_14-1.5.3-1PGDG.rhel8.x86_64
+
+Complete!
+[root@rocky810 ~]#
+
+
+[root@rocky810 ~]# pg_repack --version
+-bash: pg_repack: command not found
+[root@rocky810 ~]#
+[root@rocky810 ~]# su - postgres
+[postgres@rocky810 ~]$ pg_repack --version
+pg_repack 1.5.3
+[postgres@rocky810 ~]$
+
+
+[postgres@rocky810 ~]$ pg_repack --help
+pg_repack re-organizes a PostgreSQL database.
+
+Usage:
+  pg_repack [OPTION]... [DBNAME]
+Options:
+  -a, --all                          repack all databases
+  -t, --table=TABLE                  repack specific table only
+  -I, --parent-table=TABLE           repack specific parent table and its inheritors
+  -c, --schema=SCHEMA                repack tables in specific schema only
+  -s, --tablespace=TBLSPC            move repacked tables to a new tablespace
+  -S, --moveidx                      move repacked indexes to TBLSPC too
+  -o, --order-by=COLUMNS             order by columns instead of cluster keys
+  -n, --no-order                     do vacuum full instead of cluster
+  -N, --dry-run                      print what would have been repacked
+  -j, --jobs=NUM                     Use this many parallel jobs for each table
+  -i, --index=INDEX                  move only the specified index
+  -x, --only-indexes                 move only indexes of the specified table
+  -T, --wait-timeout=SECS            timeout to cancel other backends on conflict
+  -D, --no-kill-backend              don't kill other backends when timed out
+  -Z, --no-analyze                   don't analyze at end
+  -k, --no-superuser-check           skip superuser checks in client
+  -C, --exclude-extension            don't repack tables which belong to specific extension
+      --no-error-on-invalid-index    repack even though invalid index is found
+      --error-on-invalid-index       don't repack when invalid index is found, deprecated, as this is the default behavior now
+      --apply-count                  number of tuples to apply in one transaction during replay
+      --switch-threshold             switch tables when that many tuples are left to catchup
+
+Connection options:
+  -d, --dbname=DBNAME       database to connect
+  -h, --host=HOSTNAME       database server host or socket directory
+  -p, --port=PORT           database server port
+  -U, --username=USERNAME   user name to connect as
+  -w, --no-password         never prompt for password
+  -W, --password            force password prompt
+
+Generic options:
+  -e, --echo                echo queries
+  -E, --elevel=LEVEL        set output message level
+  --help                    show this help, then exit
+  --version                 output version information, then exit
+
+Read the website for details: <https://reorg.github.io/pg_repack/>.
+Report bugs to <https://github.com/reorg/pg_repack/issues>.
+[postgres@rocky810 ~]$
+
+
+postgres=# create database mydb;
+CREATE DATABASE
+postgres=# \l
+                                  List of databases
+   Name    |  Owner   | Encoding |   Collate   |    Ctype    |   Access privileges
+-----------+----------+----------+-------------+-------------+-----------------------
+ mydb      | postgres | UTF8     | en_IN.UTF-8 | en_IN.UTF-8 |
+ postgres  | postgres | UTF8     | en_IN.UTF-8 | en_IN.UTF-8 |
+ template0 | postgres | UTF8     | en_IN.UTF-8 | en_IN.UTF-8 | =c/postgres          +
+           |          |          |             |             | postgres=CTc/postgres
+ template1 | postgres | UTF8     | en_IN.UTF-8 | en_IN.UTF-8 | =c/postgres          +
+           |          |          |             |             | postgres=CTc/postgres
+(4 rows)
+
+postgres=# \c mydb
+You are now connected to database "mydb" as user "postgres".
+mydb=# \dn
+  List of schemas
+  Name  |  Owner
+--------+----------
+ public | postgres
+(1 row)
+
+mydb=# create schema cars;
+CREATE SCHEMA
+mydb=# create table audi (num int);
+CREATE TABLE
+mydb=# table audi;
+ num
+-----
+(0 rows)
+
+mydb=# show autovacuum;
+ autovacuum
+------------
+ on
+(1 row)
+
+mydb=# \dt+ cars.audi
+Did not find any relation named "cars.audi".
+mydb=#
+mydb=# \dt
+        List of relations
+ Schema | Name | Type  |  Owner
+--------+------+-------+----------
+ public | audi | table | postgres
+(1 row)
+
+mydb=# drop table audi;
+DROP TABLE
+mydb=# create table cars.audi (num int);
+CREATE TABLE
+mydb=# \dt+ cars.audi
+                                   List of relations
+ Schema | Name | Type  |  Owner   | Persistence | Access method |  Size   | Description
+--------+------+-------+----------+-------------+---------------+---------+-------------
+ cars   | audi | table | postgres | permanent   | heap          | 0 bytes |
+(1 row)
+
+mydb=# alter table cars.audi set autovacuum=0;
+ERROR:  syntax error at or near "autovacuum"
+LINE 1: alter table cars.audi set autovacuum=0;
+                                  ^
+mydb=# alter table cars.audi set autovacuum=off;
+ERROR:  syntax error at or near "autovacuum"
+LINE 1: alter table cars.audi set autovacuum=off;
+                                  ^
+mydb=#
+mydb=# alter table cars.audi set (autovacuum_enabled=false);
+ALTER TABLE
+mydb=# \dt+ cars.audi
+                                   List of relations
+ Schema | Name | Type  |  Owner   | Persistence | Access method |  Size   | Description
+--------+------+-------+----------+-------------+---------------+---------+-------------
+ cars   | audi | table | postgres | permanent   | heap          | 0 bytes |
+(1 row)
+
+mydb=# \d+ cars.audi
+                                           Table "cars.audi"
+ Column |  Type   | Collation | Nullable | Default | Storage | Compression | Stats target | Description
+--------+---------+-----------+----------+---------+---------+-------------+--------------+-------------
+ num    | integer |           |          |         | plain   |             |              |
+Access method: heap
+Options: autovacuum_enabled=false
+
+mydb=#
+
+
+mydb=# CREATE EXTENSION pgstattuple;
+CREATE EXTENSION
+mydb=# SELECT *
+mydb-# FROM pgstattuple('cars.audi');
+ table_len | tuple_count | tuple_len | tuple_percent | dead_tuple_count | dead_tuple_len | dead_tuple_percent | free_space | free_percent
+-----------+-------------+-----------+---------------+------------------+----------------+--------------------+------------+--------------
+         0 |           0 |         0 |             0 |                0 |              0 |                  0 |          0 |            0
+(1 row)
+
+mydb=# SELECT
+mydb-#     pg_size_pretty(table_len) AS table_size,
+mydb-#     pg_size_pretty(dead_tuple_len) AS bloat_size,
+mydb-#     dead_tuple_percent AS bloat_percent
+mydb-# FROM pgstattuple('cars.audi');
+ table_size | bloat_size | bloat_percent
+------------+------------+---------------
+ 0 bytes    | 0 bytes    |             0
+(1 row)
+
+mydb=#
+
+
+mydb=# table cars.audi
+mydb-# ;
+ num
+-----
+(0 rows)
+
+mydb=# insert into cars.audi
+mydb-# values (1);
+INSERT 0 1
+mydb=# table cars.audi
+;
+ num
+-----
+   1
+(1 row)
+
+mydb=# SELECT * FROM get_table_bloat('cars.audi');
+ table_name | table_size | bloat_size | bloat_percent
+------------+------------+------------+---------------
+ cars.audi  | 8192 bytes | 0 bytes    |             0
+(1 row)
+
+mydb=#
+
+
+
+
+******************** CREATE LOOP TO UPDATE VALUES TO BUILD BLOAT **********************
+
+
+-- LOOP:
+
+DO $$
+BEGIN
+    FOR i IN 1..1000000 LOOP
+        UPDATE cars.audi
+        SET num = 3 - num;
+    END LOOP;
+END $$;
+
+-- RUNTIME:
+
+mydb=# table cars.audi
+mydb-# ;
+ num
+-----
+(0 rows)
+
+mydb=# insert into cars.audi
+mydb-# values (1);
+INSERT 0 1
+mydb=# table cars.audi
+;
+ num
+-----
+   1
+(1 row)
+
+mydb=# SELECT * FROM get_table_bloat('cars.audi');
+ table_name | table_size | bloat_size | bloat_percent
+------------+------------+------------+---------------
+ cars.audi  | 8192 bytes | 0 bytes    |             0
+(1 row)
+
+mydb=# DO $$
+mydb$# BEGIN
+mydb$#     FOR i IN 1..1000000 LOOP
+mydb$#         UPDATE cars.audi
+mydb$#         SET num = 3 - num;
+mydb$#     END LOOP;
+mydb$# END $$;
+^CCancel request sent
+ERROR:  canceling statement due to user request
+CONTEXT:  SQL statement "UPDATE cars.audi
+        SET num = 3 - num"
+PL/pgSQL function inline_code_block line 4 at SQL statement
+mydb=#
+mydb=# SELECT * FROM get_table_bloat('cars.audi');
+ table_name | table_size | bloat_size | bloat_percent
+------------+------------+------------+---------------
+ cars.audi  | 1336 kB    | 1027 kB    |          76.9
+(1 row)
+
+mydb=# \timing
+Timing is on.
+mydb=#
+mydb=# table cars.audi
+mydb-# ;
+ num
+-----
+   1
+(1 row)
+
+Time: 2.081 ms
+mydb=#
+mydb=# insert into cars.audi values (1);
+INSERT 0 1
+Time: 7.908 ms
+mydb=# insert into cars.audi values (1);
+INSERT 0 1
+Time: 6.460 ms
+mydb=# insert into cars.audi values (1);
+INSERT 0 1
+Time: 7.343 ms
+mydb=# insert into cars.audi values (1);
+INSERT 0 1
+Time: 7.995 ms
+mydb=# insert into cars.audi values (1);
+INSERT 0 1
+Time: 6.416 ms
+mydb=# insert into cars.audi values (1);
+INSERT 0 1
+Time: 7.164 ms
+mydb=#
+mydb=#
+mydb=#
+mydb=# table cars.audi ;
+ num
+-----
+   1
+   1
+   1
+   1
+   1
+   1
+   1
+(7 rows)
+
+Time: 1.653 ms
+mydb=#
+mydb=# DO $$
+BEGIN
+    FOR i IN 1..1000 LOOP
+        UPDATE cars.audi
+        SET num = 3 - num;
+    END LOOP;
+END $$;
+DO
+Time: 350.711 ms
+mydb=# SELECT * FROM get_table_bloat('cars.audi');
+ table_name | table_size | bloat_size | bloat_percent
+------------+------------+------------+---------------
+ cars.audi  | 1576 kB    | 191 kB     |         12.15
+(1 row)
+
+Time: 3.948 ms
+mydb=#
+mydb=# DO $$
+BEGIN
+    FOR i IN 1..1000 LOOP
+        UPDATE cars.audi
+        SET num = 3 - num;
+    END LOOP;
+END $$;
+DO
+Time: 334.946 ms
+mydb=# DO $$
+BEGIN
+    FOR i IN 1..1000 LOOP
+        UPDATE cars.audi
+        SET num = 3 - num;
+    END LOOP;
+END $$;
+DO
+Time: 350.692 ms
+mydb=# DO $$
+BEGIN
+    FOR i IN 1..1000 LOOP
+        UPDATE cars.audi
+        SET num = 3 - num;
+    END LOOP;
+END $$;
+DO
+Time: 379.614 ms
+mydb=# DO $$
+BEGIN
+    FOR i IN 1..1000 LOOP
+        UPDATE cars.audi
+        SET num = 3 - num;
+    END LOOP;
+END $$;
+DO
+Time: 438.659 ms
+mydb=# SELECT * FROM get_table_bloat('cars.audi');
+ table_name | table_size | bloat_size | bloat_percent
+------------+------------+------------+---------------
+ cars.audi  | 2536 kB    | 191 kB     |          7.55
+(1 row)
+
+Time: 4.813 ms
+mydb=# \d+ cars.audi
+                                           Table "cars.audi"
+ Column |  Type   | Collation | Nullable | Default | Storage | Compression | Stats target | Description
+--------+---------+-----------+----------+---------+---------+-------------+--------------+-------------
+ num    | integer |           |          |         | plain   |             |              |
+Access method: heap
+Options: autovacuum_enabled=false
+
+mydb=# SELECT * FROM pgstattuple('cars.audi');
+ table_len | tuple_count | tuple_len | tuple_percent | dead_tuple_count | dead_tuple_len | dead_tuple_percent | free_space | free_percent
+-----------+-------------+-----------+---------------+------------------+----------------+--------------------+------------+--------------
+   2596864 |           7 |       196 |          0.01 |             7000 |         196000 |               7.55 |    2077980 |        80.02
+(1 row)
+
+Time: 3.549 ms
+mydb=# SELECT
+mydb-#     n_live_tup,
+mydb-#     n_dead_tup,
+mydb-#     vacuum_count,
+mydb-#     autovacuum_count
+mydb-# FROM pg_stat_user_tables
+mydb-# WHERE schemaname = 'cars'
+mydb-#   AND relname = 'audi';
+ n_live_tup | n_dead_tup | vacuum_count | autovacuum_count
+------------+------------+--------------+------------------
+          7 |       7995 |            0 |                0
+(1 row)
+
+Time: 19.388 ms
+mydb=#
+
+
+
+---------- NEW APPROACH --------------
+
+
+mydb=# CREATE TABLE cars.audi (
+mydb(#     id  integer PRIMARY KEY,
+mydb(#     num integer
+mydb(# );
+CREATE TABLE
+Time: 22.503 ms
+mydb=# ALTER TABLE cars.audi
+mydb-# SET (autovacuum_enabled = false);
+ALTER TABLE
+Time: 7.045 ms
+mydb=# \d+ cars.audi
+                                           Table "cars.audi"
+ Column |  Type   | Collation | Nullable | Default | Storage | Compression | Stats target | Description
+--------+---------+-----------+----------+---------+---------+-------------+--------------+-------------
+ id     | integer |           | not null |         | plain   |             |              |
+ num    | integer |           |          |         | plain   |             |              |
+Indexes:
+    "audi_pkey" PRIMARY KEY, btree (id)
+Access method: heap
+Options: autovacuum_enabled=false
+
+mydb=# INSERT INTO cars.audi (id, num)
+mydb-# SELECT i, 1
+mydb-# FROM generate_series(1, 100000) AS i;
+INSERT 0 100000
+Time: 505.330 ms
+mydb=# SELECT * FROM get_table_bloat('cars.audi');
+ table_name | table_size | bloat_size | bloat_percent
+------------+------------+------------+---------------
+ cars.audi  | 3544 kB    | 0 bytes    |             0
+(1 row)
+
+Time: 20.223 ms
+mydb=# DO $$
+mydb$# BEGIN
+mydb$#     FOR i IN 1..20 LOOP
+mydb$#         UPDATE cars.audi
+mydb$#         SET id = id + 1000000;
+mydb$#
+mydb$#         UPDATE cars.audi
+mydb$#         SET id = id - 1000000;
+mydb$#     END LOOP;
+mydb$# END $$;
+DO
+Time: 267941.715 ms (04:27.942)
+mydb=# SELECT * FROM get_table_bloat('cars.audi');
+ table_name | table_size | bloat_size | bloat_percent
+------------+------------+------------+---------------
+ cars.audi  | 142 MB     | 122 MB     |         86.13
+(1 row)
+
+Time: 1237.917 ms (00:01.238)
+mydb=# SELECT *
+mydb-# FROM pgstattuple('cars.audi');
+ table_len | tuple_count | tuple_len | tuple_percent | dead_tuple_count | dead_tuple_len | dead_tuple_percent | free_space | free_percent
+-----------+-------------+-----------+---------------+------------------+----------------+--------------------+------------+--------------
+ 148619264 |      100000 |   3200000 |          2.15 |          4000000 |      128000000 |              86.13 |     511288 |         0.34
+(1 row)
+
+Time: 762.507 ms
+mydb=# show data_directory;
+     data_directory
+------------------------
+ /var/lib/pgsql/14/data
+(1 row)
+
+Time: 1.706 ms
+mydb=# \q
+[postgres@rocky810 data]$ df -Ph .
+Filesystem           Size  Used Avail Use% Mounted on
+/dev/mapper/rl-root   17G  5.3G   12G  32% /
+[postgres@rocky810 data]$
+
+
+
+
+------------- ANOTHER APPROACH BY CREATING LARGE TABLE FIRST WITH LARGE SIZED ROWS --------------
+
+[postgres@rocky810 data]$ psql
+psql (14.23)
+Type "help" for help.
+
+postgres=# \c mydb
+You are now connected to database "mydb" as user "postgres".
+mydb=# alter table cars.audi rename to cars.lambo;
+ERROR:  syntax error at or near "."
+LINE 1: alter table cars.audi rename to cars.lambo;
+                                            ^
+mydb=# alter table cars.audi rename to lambo;
+ALTER TABLE
+mydb=# \d+ cars.lambo
+                                           Table "cars.lambo"
+ Column |  Type   | Collation | Nullable | Default | Storage | Compression | Stats target | Description
+--------+---------+-----------+----------+---------+---------+-------------+--------------+-------------
+ id     | integer |           | not null |         | plain   |             |              |
+ num    | integer |           |          |         | plain   |             |              |
+Indexes:
+    "audi_pkey" PRIMARY KEY, btree (id)
+Access method: heap
+Options: autovacuum_enabled=false
+
+mydb=#
+mydb=# CREATE TABLE cars.audi (
+mydb(#     id BIGINT PRIMARY KEY,
+mydb(#     num INTEGER
+mydb(# );
+CREATE TABLE
+mydb=#
+mydb=# ALTER TABLE cars.audi
+mydb-# SET (autovacuum_enabled = false);
+ALTER TABLE
+mydb=# 
+
+
+mydb=# CREATE INDEX idx_audi_num ON cars.audi(num);
+CREATE INDEX
+mydb=# INSERT INTO cars.audi
+mydb-# SELECT
+mydb-#     i,
+mydb-#     1
+mydb-# FROM generate_series(1, 10000000) AS i;
+... running ....
+
+
+
+Meanwhile its taking time to complete, lets repack the lambo table.
+
+
+
+[postgres@rocky810 ~]$ psql
+psql (14.23)
+Type "help" for help.
+
+postgres=# \c mydb
+You are now connected to database "mydb" as user "postgres".
+mydb=# \di cars.*
+                List of relations
+ Schema |     Name     | Type  |  Owner   | Table
+--------+--------------+-------+----------+-------
+ cars   | audi_pkey    | index | postgres | lambo
+ cars   | audi_pkey1   | index | postgres | audi
+ cars   | idx_audi_num | index | postgres | audi
+(3 rows)
+
+mydb=# \dt cars.*
+         List of relations
+ Schema | Name  | Type  |  Owner
+--------+-------+-------+----------
+ cars   | audi  | table | postgres
+ cars   | lambo | table | postgres
+(2 rows)
+
+mydb=# SELECT * FROM get_table_bloat('cars.audi');
+^CCancel request sent
+ERROR:  canceling statement due to user request
+CONTEXT:  SQL statement "SELECT
+        p_table::text,
+        pg_size_pretty(s.table_len),
+        pg_size_pretty(s.dead_tuple_len),
+        s.dead_tuple_percent
+    FROM pgstattuple(p_table) AS s"
+PL/pgSQL function get_table_bloat(regclass) line 3 at RETURN QUERY
+mydb=#
+mydb=# SELECT * FROM get_table_bloat('cars.lambo');
+ table_name | table_size | bloat_size | bloat_percent
+------------+------------+------------+---------------
+ cars.lambo | 142 MB     | 122 MB     |         86.13
+(1 row)
+
+mydb=# SELECT * FROM get_table_bloat('cars.audi_pkey');
+   table_name   | table_size | bloat_size | bloat_percent
+----------------+------------+------------+---------------
+ cars.audi_pkey | 39 MB      | 0 bytes    |             0
+(1 row)
+
+mydb=#
+
+
+mydb=# \q
+[postgres@rocky810 ~]$ pg_repack -d mydb -c cars -t lambo
+ERROR: cannot repack specific table(s) in schema, use schema.table notation instead
+[postgres@rocky810 ~]$
+[postgres@rocky810 ~]$ pg_repack --help
+pg_repack re-organizes a PostgreSQL database.
+
+Usage:
+  pg_repack [OPTION]... [DBNAME]
+Options:
+  -a, --all                          repack all databases
+  -t, --table=TABLE                  repack specific table only
+  -I, --parent-table=TABLE           repack specific parent table and its inheritors
+  -c, --schema=SCHEMA                repack tables in specific schema only
+  -s, --tablespace=TBLSPC            move repacked tables to a new tablespace
+  -S, --moveidx                      move repacked indexes to TBLSPC too
+  -o, --order-by=COLUMNS             order by columns instead of cluster keys
+  -n, --no-order                     do vacuum full instead of cluster
+  -N, --dry-run                      print what would have been repacked
+  -j, --jobs=NUM                     Use this many parallel jobs for each table
+  -i, --index=INDEX                  move only the specified index
+  -x, --only-indexes                 move only indexes of the specified table
+  -T, --wait-timeout=SECS            timeout to cancel other backends on conflict
+  -D, --no-kill-backend              don't kill other backends when timed out
+  -Z, --no-analyze                   don't analyze at end
+  -k, --no-superuser-check           skip superuser checks in client
+  -C, --exclude-extension            don't repack tables which belong to specific extension
+      --no-error-on-invalid-index    repack even though invalid index is found
+      --error-on-invalid-index       don't repack when invalid index is found, deprecated, as this is the default behavior now
+      --apply-count                  number of tuples to apply in one transaction during replay
+      --switch-threshold             switch tables when that many tuples are left to catchup
+
+Connection options:
+  -d, --dbname=DBNAME       database to connect
+  -h, --host=HOSTNAME       database server host or socket directory
+  -p, --port=PORT           database server port
+  -U, --username=USERNAME   user name to connect as
+  -w, --no-password         never prompt for password
+  -W, --password            force password prompt
+
+Generic options:
+  -e, --echo                echo queries
+  -E, --elevel=LEVEL        set output message level
+  --help                    show this help, then exit
+  --version                 output version information, then exit
+
+Read the website for details: <https://reorg.github.io/pg_repack/>.
+Report bugs to <https://github.com/reorg/pg_repack/issues>.
+[postgres@rocky810 ~]$ \
+> \^C
+[postgres@rocky810 ~]$
+[postgres@rocky810 ~]$ pg_repack -d mydb -t cars.lambo
+ERROR: pg_repack failed with error: pg_repack 1.5.3 is not installed in the database
+[postgres@rocky810 ~]$ psql -d mydb
+psql (14.23)
+Type "help" for help.
+
+mydb=# create extension pg_repack ;
+CREATE EXTENSION
+mydb=# \dx
+                                   List of installed extensions
+    Name     | Version |   Schema   |                         Description
+-------------+---------+------------+--------------------------------------------------------------
+ pg_repack   | 1.5.3   | public     | Reorganize tables in PostgreSQL databases with minimal locks
+ pgstattuple | 1.5     | public     | show tuple-level statistics
+ plpgsql     | 1.0     | pg_catalog | PL/pgSQL procedural language
+(3 rows)
+
+mydb=# \q
+[postgres@rocky810 ~]$ pg_repack -d mydb -t cars.lambo
+INFO: repacking table "cars.lambo"
+[postgres@rocky810 ~]$
+[postgres@rocky810 ~]$  ##### ---- took less than 2 seconds ------
+[postgres@rocky810 ~]$
+[postgres@rocky810 ~]$ psql -d mydb
+psql (14.23)
+Type "help" for help.
+
+mydb=# SELECT * FROM get_table_bloat('cars.lambo');
+ table_name | table_size | bloat_size | bloat_percent
+------------+------------+------------+---------------
+ cars.lambo | 3544 kB    | 0 bytes    |             0
+(1 row)
+
+mydb=# SELECT * FROM get_table_bloat('cars.audi_pkey');
+   table_name   | table_size | bloat_size | bloat_percent
+----------------+------------+------------+---------------
+ cars.audi_pkey | 2208 kB    | 0 bytes    |             0
+(1 row)
+
+mydb=#
+
+
+mydb=# \d+ cars.lambo
+                                           Table "cars.lambo"
+ Column |  Type   | Collation | Nullable | Default | Storage | Compression | Stats target | Description
+--------+---------+-----------+----------+---------+---------+-------------+--------------+-------------
+ id     | integer |           | not null |         | plain   |             |              |
+ num    | integer |           |          |         | plain   |             |              |
+Indexes:
+    "audi_pkey" PRIMARY KEY, btree (id)
+Access method: heap
+Options: autovacuum_enabled=false
+
+mydb=#
+
+
+
+---------- testing a table without primary key ------------
+
+
+mydb=# create table cars.small (int bigint);
+CREATE TABLE
+mydb=# insert into cars.small values (1);
+INSERT 0 1
+mydb=# SELECT * FROM get_table_bloat('cars.small');
+ table_name | table_size | bloat_size | bloat_percent
+------------+------------+------------+---------------
+ cars.small | 8192 bytes | 0 bytes    |             0
+(1 row)
+
+mydb=# update cars.small set int = 2;
+UPDATE 1
+mydb=# table cars.small ;
+ int
+-----
+   2
+(1 row)
+
+mydb=# SELECT * FROM get_table_bloat('cars.small');
+ table_name | table_size | bloat_size | bloat_percent
+------------+------------+------------+---------------
+ cars.small | 8192 bytes | 32 bytes   |          0.39
+(1 row)
+
+mydb=# \q
+[postgres@rocky810 ~]$ psql -d mydb
+psql (14.23)
+Type "help" for help.
+
+mydb=# \d+ cars.small
+                                          Table "cars.small"
+ Column |  Type  | Collation | Nullable | Default | Storage | Compression | Stats target | Description
+--------+--------+-----------+----------+---------+---------+-------------+--------------+-------------
+ int    | bigint |           |          |         | plain   |             |              |
+Access method: heap
+
+mydb=# \q
+[postgres@rocky810 ~]$ psql
+psql (14.23)
+Type "help" for help.
+
+postgres=# \q
+[postgres@rocky810 ~]$ psql -d mydb
+psql (14.23)
+Type "help" for help.
+
+mydb=# alter table cars.small set (autovacuum_enabled = false);
+ALTER TABLE
+mydb=# \d+ cars.small
+                                          Table "cars.small"
+ Column |  Type  | Collation | Nullable | Default | Storage | Compression | Stats target | Description
+--------+--------+-----------+----------+---------+---------+-------------+--------------+-------------
+ int    | bigint |           |          |         | plain   |             |              |
+Access method: heap
+Options: autovacuum_enabled=false
+
+mydb=# \q
+[postgres@rocky810 ~]$ psql -d mydb
+psql (14.23)
+Type "help" for help.
+
+mydb=# SELECT * FROM get_table_bloat('cars.small');
+ table_name | table_size | bloat_size | bloat_percent
+------------+------------+------------+---------------
+ cars.small | 8192 bytes | 32 bytes   |          0.39
+(1 row)
+
+mydb=# \q
+[postgres@rocky810 ~]$ pg_repack -d mydb -t cars.small
+WARNING: relation "cars.small" must have a primary key or not-null unique keys
+[postgres@rocky810 ~]$
+[postgres@rocky810 ~]$
+
+
+
+
+
+-------------- ...RESUMING THE LARGE TABLE CREATION AND GENERATING BLOAD -----------------
+
+
+...resuming
+
+
+mydb=# INSERT INTO cars.audi
+mydb-# SELECT
+mydb-#     i,
+mydb-#     1
+mydb-# FROM generate_series(1, 10000000) AS i;
+INSERT 0 10000000
+mydb=#
+mydb=# SELECT * FROM get_table_bloat('cars.audi');
+ table_name | table_size | bloat_size | bloat_percent
+------------+------------+------------+---------------
+ cars.audi  | 422 MB     | 0 bytes    |             0
+(1 row)
+
+mydb=# \timing
+Timing is on.
+mydb=# \di cars.*
+                List of relations
+ Schema |     Name     | Type  |  Owner   | Table
+--------+--------------+-------+----------+-------
+ cars   | audi_pkey    | index | postgres | lambo
+ cars   | audi_pkey1   | index | postgres | audi
+ cars   | idx_audi_num | index | postgres | audi
+(3 rows)
+
+mydb=# \di+ cars.*
+                                           List of relations
+ Schema |     Name     | Type  |  Owner   | Table | Persistence | Access method |  Size   | Description
+--------+--------------+-------+----------+-------+-------------+---------------+---------+-------------
+ cars   | audi_pkey    | index | postgres | lambo | permanent   | btree         | 2208 kB |
+ cars   | audi_pkey1   | index | postgres | audi  | permanent   | btree         | 214 MB  |
+ cars   | idx_audi_num | index | postgres | audi  | permanent   | btree         | 61 MB   |
+(3 rows)
+
+mydb=# SELECT * FROM get_table_bloat('cars.audi_pkey1');
+   table_name    | table_size | bloat_size | bloat_percent
+-----------------+------------+------------+---------------
+ cars.audi_pkey1 | 214 MB     | 0 bytes    |             0
+(1 row)
+
+Time: 189.375 ms
+mydb=# SELECT * FROM get_table_bloat('cars.idx_audi_num');
+    table_name     | table_size | bloat_size | bloat_percent
+-------------------+------------+------------+---------------
+ cars.idx_audi_num | 61 MB      | 0 bytes    |             0
+(1 row)
+
+Time: 89.097 ms
+mydb=#
+mydb=# UPDATE cars.audi
+mydb-# SET num = 2;
+UPDATE 10000000
+Time: 49580.177 ms (00:49.580)
+mydb=# SELECT * FROM get_table_bloat('cars.audi');
+ table_name | table_size | bloat_size | bloat_percent
+------------+------------+------------+---------------
+ cars.audi  | 845 MB     | 343 MB     |         40.65
+(1 row)
+
+Time: 3288.601 ms (00:03.289)
+mydb=# SELECT * FROM get_table_bloat('cars.audi_pkey1');
+   table_name    | table_size | bloat_size | bloat_percent
+-----------------+------------+------------+---------------
+ cars.audi_pkey1 | 428 MB     | 0 bytes    |             0
+(1 row)
+
+Time: 541.149 ms
+mydb=# SELECT * FROM get_table_bloat('cars.idx_audi_num');
+    table_name     | table_size | bloat_size | bloat_percent
+-------------------+------------+------------+---------------
+ cars.idx_audi_num | 132 MB     | 0 bytes    |             0
+(1 row)
+
+Time: 166.807 ms
+mydb=#
+
+
+--------------- COPY THE DATADIR SO I CAN TEST FULL VACUUM ON BLOATED TABLE --------------
+
+mydb=# \q
+[postgres@rocky810 data]$ pg_ctl stop -D .
+waiting for server to shut down.... done
+server stopped
+[postgres@rocky810 data]$ pwd
+/var/lib/pgsql/14/data
+[postgres@rocky810 data]$ cd ..
+[postgres@rocky810 14]$ ls
+backups  data
+[postgres@rocky810 14]$ cp -a data data_2
+[postgres@rocky810 14]$ ls -lrt
+total 8
+drwx------.  2 postgres postgres    6 May 17 23:05 backups
+drwx------. 20 postgres postgres 4096 Jul  5 16:02 data_2
+drwx------. 20 postgres postgres 4096 Jul  5 16:02 data
+
+
+-------------- TEST PG_REPACK (Took around 15 seconds to repack table) ----------------
+
+[postgres@rocky810 14]$ pg_ctl start -D data
+waiting for server to start....2026-07-05 16:02:58.477 IST [2431] LOG:  redirecting log output to logging collector process
+2026-07-05 16:02:58.477 IST [2431] HINT:  Future log output will appear in directory "log".
+ done
+server started
+[postgres@rocky810 14]$ select now(); pg_repack -d mydb -t cars.audi; select now();
+-bash: syntax error near unexpected token `('
+[postgres@rocky810 14]$
+
+[postgres@rocky810 14]$
+[postgres@rocky810 14]$ date; pg_repack -d mydb -t cars.audi; date;
+Sun Jul  5 16:03:51 IST 2026
+INFO: repacking table "cars.audi"
+Sun Jul  5 16:04:05 IST 2026
+[postgres@rocky810 14]$
+[postgres@rocky810 14]$
+
+
+[postgres@rocky810 14]$ psql -d mydb
+psql (14.23)
+Type "help" for help.
+
+mydb=# SELECT * FROM get_table_bloat('cars.audi');
+ table_name | table_size | bloat_size | bloat_percent
+------------+------------+------------+---------------
+ cars.audi  | 422 MB     | 0 bytes    |             0
+(1 row)
+
+mydb=# SELECT * FROM get_table_bloat('cars.audi_pkey1');
+   table_name    | table_size | bloat_size | bloat_percent
+-----------------+------------+------------+---------------
+ cars.audi_pkey1 | 214 MB     | 0 bytes    |             0
+(1 row)
+
+mydb=# SELECT * FROM get_table_bloat('cars.idx_audi_num');
+    table_name     | table_size | bloat_size | bloat_percent
+-------------------+------------+------------+---------------
+ cars.idx_audi_num | 66 MB      | 0 bytes    |             0
+(1 row)
+
+mydb=#
+
+
+-------------- TEST FULL VACUUM (Took around 10-15 seconds to full vacuum table) --------------
+
+[postgres@rocky810 14]$ pwd
+/var/lib/pgsql/14
+[postgres@rocky810 14]$ ls
+backups  data  data_2
+[postgres@rocky810 14]$ cd data_2
+[postgres@rocky810 data_2]$ echo "port=5433" >> postgresql.auto.conf
+[postgres@rocky810 data_2]$ pg_ctl start -D .
+waiting for server to start....2026-07-05 16:06:45.300 IST [2469] LOG:  redirecting log output to logging collector process
+2026-07-05 16:06:45.300 IST [2469] HINT:  Future log output will appear in directory "log".
+ done
+server started
+[postgres@rocky810 data_2]$ psql -d mydb -p 5433
+psql (14.23)
+Type "help" for help.
+
+mydb=# SELECT * FROM get_table_bloat('cars.audi');
+ table_name | table_size | bloat_size | bloat_percent
+------------+------------+------------+---------------
+ cars.audi  | 845 MB     | 343 MB     |         40.65
+(1 row)
+
+mydb=# SELECT * FROM get_table_bloat('cars.audi_pkey1');
+   table_name    | table_size | bloat_size | bloat_percent
+-----------------+------------+------------+---------------
+ cars.audi_pkey1 | 428 MB     | 0 bytes    |             0
+(1 row)
+
+mydb=# SELECT * FROM get_table_bloat('cars.idx_audi_num');
+    table_name     | table_size | bloat_size | bloat_percent
+-------------------+------------+------------+---------------
+ cars.idx_audi_num | 132 MB     | 0 bytes    |             0
+(1 row)
+
+mydb=# \q
+[postgres@rocky810 data_2]$ pg_ctl stop -D .
+waiting for server to shut down.... done
+server stopped
+[postgres@rocky810 data_2]$ cp -a ../data_2 ../data_3
+[postgres@rocky810 data_2]$ df -Ph .
+Filesystem           Size  Used Avail Use% Mounted on
+/dev/mapper/rl-root   17G   11G  6.2G  64% /
+[postgres@rocky810 data_2]$ pg_ctl start -D .
+waiting for server to start....2026-07-05 16:07:46.694 IST [2498] LOG:  redirecting log output to logging collector process
+2026-07-05 16:07:46.694 IST [2498] HINT:  Future log output will appear in directory "log".
+ done
+server started
+[postgres@rocky810 data_2]$
+[postgres@rocky810 data_2]$
+
+
+
+
+
+
+[postgres@rocky810 data_2]$ psql -d mydb -p 5433
+psql (14.23)
+Type "help" for help.
+
+mydb=# vacuum full cars.audi ;
+VACUUM
+mydb=#
+
+
+
+
+mydb=# SELECT * FROM get_table_bloat('cars.audi');
+ table_name | table_size | bloat_size | bloat_percent
+------------+------------+------------+---------------
+ cars.audi  | 422 MB     | 0 bytes    |             0
+(1 row)
+
+mydb=# SELECT * FROM get_table_bloat('cars.audi_pkey1');
+   table_name    | table_size | bloat_size | bloat_percent
+-----------------+------------+------------+---------------
+ cars.audi_pkey1 | 214 MB     | 0 bytes    |             0
+(1 row)
+
+mydb=# SELECT * FROM get_table_bloat('cars.idx_audi_num');
+    table_name     | table_size | bloat_size | bloat_percent
+-------------------+------------+------------+---------------
+ cars.idx_audi_num | 66 MB      | 0 bytes    |             0
+(1 row)
+
+mydb=#
+mydb=#
+mydb=#
+
+
+
+----------------- ANALYZE THE TABLE -----------------
+
+
+mydb=# analyze VERBOSE cars.audi ;
+INFO:  analyzing "cars.audi"
+INFO:  "audi": scanned 30000 of 54055 pages, containing 5549825 live rows and 0 dead rows; 30000 rows in sample, 9999860 estimated total rows
+ANALYZE
+mydb=#
+
+
+
+mydb=# select * from pg_stat_user_tables where relname = 'audi';
+-[ RECORD 1 ]-------+---------------------------------
+relid               | 16409
+schemaname          | cars
+relname             | audi
+seq_scan            | 13
+seq_tup_read        | 112426571
+idx_scan            | 0
+idx_tup_fetch       | 0
+n_tup_ins           | 10000000
+n_tup_upd           | 10000000
+n_tup_del           | 0
+n_tup_hot_upd       | 0
+n_live_tup          | 9999860
+n_dead_tup          | 0
+n_mod_since_analyze | 0
+n_ins_since_vacuum  | 10000000
+last_vacuum         |
+last_autovacuum     |
+last_analyze        | 2026-07-05 16:10:44.710617+05:30
+last_autoanalyze    |
+vacuum_count        | 0
+autovacuum_count    | 0
+analyze_count       | 1
+autoanalyze_count   | 0
+
+mydb=# select now();
+-[ RECORD 1 ]-------------------------
+now | 2026-07-05 16:13:49.298379+05:30
+
+mydb=#
+
+
+
+
+

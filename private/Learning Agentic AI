@@ -4,6 +4,7 @@ AGENTIC AI
 Applications:
 
 1. Google AntiGravity (myJio App free 1.5 year license) or VS Code
+		|_ Better install AntiGravity on Linux directly instead of windows as linux os structure is better for development and running commands which will be triggered by AntiGravity. You can install GUI on linux and RDP to it so as to install and access AnitGravity GUI.
 2. Hugging Face (free)
 3. Windsurf Plugin (free) for VS Code
 4. Llama Model LLM (free)
@@ -27,7 +28,7 @@ Learning Links:
 
 1. https://dev.to/ajitkumar/the-complete-guide-to-ollama-run-large-language-models-locally-2mge
 
-Download Ollama:
+Download Ollama (by Meta):
 		|_ curl -fsSL https://ollama.com/install.sh | sh
 		|_ ollama run <model>:Xb
 				<model> is model name with version number - example: llama3.2:3b or llama3.1:4b or llama 3.1:8b

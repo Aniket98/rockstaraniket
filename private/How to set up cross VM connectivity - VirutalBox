@@ -1,0 +1,27 @@
+How to set up cross VM connectivity - VirutalBox
+==========================================================
+
+*************** ON SLES *********************
+
+mycloud:~ # mkdir how_to_setup_crossVMConnectivity
+mycloud:~ # cd how_to_setup_crossVMConnectivity/
+mycloud:~/how_to_setup_crossVMConnectivity # vi plan
+mycloud:~/how_to_setup_crossVMConnectivity # cat plan
+turn off VM, add network adapter -> Host-only adapter
+start VM
+
+ip addr
+make the DOWN ehtX up:
+   sudo ip link set eth1 up
+
+in SLES:
+        run: yast lan
+                |_ here Edit ehtX, change from static address to dynamic address DHCP --> then, select next and then select OK.
+
+check ip will add:
+        run: hostname -I
+
+mycloud:~/how_to_setup_crossVMConnectivity #
+
+*******************************************************************************************
+
