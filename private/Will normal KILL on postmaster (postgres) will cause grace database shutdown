@@ -41,3 +41,9 @@ localhost:/home/postgres/data15/log # tail -4f $(ls -rt|tail -1)
 
 NOTE: This line was seen in both smart and fast shutdown and is normal behavior of postgres database while shutting down.
 The line is this:  background worker "logical replication launcher" (PID XXXX) exited with exit code 1
+
+# Postgresql shutdown modes
+
+1. https://www.postgresql.org/docs/current/server-shutdown.html
+2. https://www.cybertec-postgresql.com/en/postgresql-shutdown-modes/
+

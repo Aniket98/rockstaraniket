@@ -1,0 +1,329 @@
+PostgreSQL Data Checksums & ECC RAM Notes
+=========================================
+
+1. What is a Data Checksum?
+---------------------------
+A data checksum is a small mathematical value (fingerprint) calculated from the contents of a PostgreSQL data page.
+
+PostgreSQL stores data in 8 KB pages.
+
+Each page contains:
+- Actual data
+- Page header
+- Checksum (if checksums are enabled)
+
+Example:
+
+Data Page:
+-----------------------------------
+Alice
+Bob
+Charlie
+-----------------------------------
+
+Calculated checksum = 45871
+
+Stored on disk:
+
+-----------------------------------
+Header
+Checksum = 45871
+-----------------------------------
+Alice
+Bob
+Charlie
+-----------------------------------
+
+
+2. Why are checksums needed?
+----------------------------
+Whenever PostgreSQL reads a page from disk, it:
+
+1. Reads the entire page.
+2. Recalculates the checksum.
+3. Compares it with the stored checksum.
+
+If they match:
+    Page is valid.
+
+If they don't:
+    PostgreSQL reports page corruption.
+
+Example:
+
+Stored checksum     = 45871
+Calculated checksum = 45871
+
+✓ Page is valid
+
+
+Corrupted page:
+
+Stored checksum     = 45871
+Calculated checksum = 12398
+
+✗ Checksum mismatch
+ERROR: invalid page
+ERROR: checksum verification failed
+
+
+3. When is checksum calculated?
+-------------------------------
+Checksums are NOT calculated during every UPDATE.
+
+An UPDATE modifies the page only in Shared Buffers.
+
+When PostgreSQL later flushes that dirty page to disk:
+
+1. Page exists in Shared Buffers.
+2. PostgreSQL calculates a NEW checksum.
+3. Checksum is written into the page header.
+4. Entire 8 KB page is written to disk.
+
+Flow:
+
+UPDATE
+   ↓
+Shared Buffers
+   ↓
+Dirty page
+   ↓
+Calculate checksum
+   ↓
+Write page to disk
+
+
+4. Is checksum calculated in Shared Buffers?
+--------------------------------------------
+Yes.
+
+The checksum is calculated while the page is still in memory,
+immediately before writing the page to disk.
+
+
+5. Is checksum for the whole file?
+----------------------------------
+No.
+
+Each individual 8 KB page has its own checksum.
+
+Example:
+
+Table file
+
+Page 0  → checksum A
+Page 1  → checksum B
+Page 2  → checksum C
+...
+Page N  → checksum Z
+
+This allows PostgreSQL to identify exactly which page is corrupted.
+
+
+6. Can checksum itself become corrupted?
+----------------------------------------
+Yes.
+
+Example:
+
+Data is correct.
+
+Stored checksum = 11111
+
+But checksum field becomes:
+
+Stored checksum = 99999
+
+When PostgreSQL reads:
+
+Calculated checksum = 11111
+Stored checksum     = 99999
+
+Mismatch detected.
+
+So corruption of either:
+- data
+- checksum
+or both
+
+will usually be detected.
+
+
+7. What checksums can detect
+----------------------------
+✓ Disk corruption
+✓ SSD firmware bugs
+✓ RAID controller bugs
+✓ Filesystem corruption
+✓ Wrong block written (misdirected write)
+✓ Bit rot
+✓ Storage transfer corruption
+
+Checksums detect corruption that happens AFTER PostgreSQL has written
+the page.
+
+
+8. What checksums CANNOT detect
+-------------------------------
+If corruption happens BEFORE checksum calculation,
+checksums cannot help.
+
+Example:
+
+Application
+      ↓
+Shared Buffers
+      ↓
+RAM corruption
+      ↓
+Checksum calculated
+      ↓
+Disk
+
+Since checksum was calculated from already corrupted data,
+both data and checksum match.
+
+PostgreSQL thinks the page is valid.
+
+
+9. What is ECC RAM?
+-------------------
+ECC = Error Correcting Code RAM
+
+ECC RAM stores extra bits for every memory block.
+
+These extra bits allow hardware to detect and correct memory errors.
+
+
+Normal RAM
+
+Data:
+
+01010110
+
+One bit flips:
+
+01000110
+
+CPU receives wrong value.
+
+Nobody knows.
+
+
+ECC RAM
+
+Data:
+01010110
+
+ECC bits:
+1010
+
+If one bit flips:
+
+01000110
+
+ECC hardware detects:
+
+"Bit 4 is incorrect."
+
+It automatically repairs it.
+
+CPU receives:
+
+01010110
+
+
+10. Why is ECC important for PostgreSQL?
+----------------------------------------
+Suppose PostgreSQL has this page:
+
+Balance = 1000
+
+A RAM error changes it to:
+
+Balance = 9000
+
+Without ECC:
+
+PostgreSQL calculates checksum on 9000.
+
+Writes it to disk.
+
+Now disk contains:
+
+Balance = 9000
+Checksum = valid
+
+Checksums cannot detect this because the corruption already existed
+before checksum calculation.
+
+
+With ECC:
+
+RAM detects the bit flip.
+
+Repairs it instantly.
+
+PostgreSQL never sees corrupted data.
+
+
+11. Can ECC fix every error?
+----------------------------
+ECC can usually:
+
+✓ Correct single-bit memory errors automatically.
+
+✓ Detect most double-bit errors.
+
+✗ Cannot correct large multi-bit memory corruption.
+
+
+12. Why use BOTH ECC and PostgreSQL Checksums?
+----------------------------------------------
+ECC protects memory.
+
+Checksums protect disk.
+
+Example:
+
+Application
+      ↓
+ECC RAM
+      ↓
+Shared Buffers
+      ↓
+Checksum calculation
+      ↓
+Disk
+      ↓
+Read page
+      ↓
+Checksum verification
+
+ECC catches memory corruption.
+
+Checksums catch storage corruption.
+
+Together they provide much stronger protection.
+
+
+13. Production Best Practice
+----------------------------
+For enterprise PostgreSQL servers:
+
+✓ ECC RAM
+✓ PostgreSQL Data Checksums
+✓ Enterprise SSD/NVMe
+✓ Reliable RAID/HBA
+✓ Streaming Replication
+✓ Regular Backups
+✓ Periodic integrity checks
+
+This combination provides the best protection against silent data corruption.
+
+
+Does your MSI Katana B13U have ECC?
+
+No.
+
+The Intel Core i5/i7 processors used in the MSI Katana 15 B13U series use standard DDR5 memory, not ECC memory.
