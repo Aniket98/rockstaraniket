@@ -102,7 +102,7 @@ postgres=# table watch ;
 postgres=#
 
 
-SESSION 1 resume:
+SESSION 1 resume (Note: I did not SELECT watch in session earlier, so table watch was untouched by SESSION 1, still it is able to show me old data, quite cool!):
 
 postgres=*# table watch ;
  num
@@ -111,4 +111,4 @@ postgres=*# table watch ;
 (1 row)
 
 postgres=*#
- 
+
