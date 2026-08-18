@@ -1,0 +1,3 @@
+# Test
+
+if i add a random file in PGDATA/Base, will the pgbasebackup will ignore it?

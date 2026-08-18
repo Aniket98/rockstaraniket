@@ -1,0 +1,114 @@
+PostgresSQL TX modes:
+
+1. Read Committed
+2. Repeatable Read
++ more
+
+
+============================= READ Committed ==========================
+
+SESSION 1:
+
+postgres@localhost:~> psql
+psql (16.6)
+Type "help" for help.
+
+postgres=# BEGIN;
+BEGIN
+postgres=*# table test;
+ strings
+---------
+ apple2
+ mango
+(2 rows)
+
+SESSION 2:
+
+postgres=# table test;
+ strings
+---------
+ apple2
+ mango
+(2 rows)
+
+postgres=# update test set strings = 'apple3' where strings = 'apple2';
+UPDATE 1
+postgres=#
+postgres=# update test set strings = 'apple4' where strings = 'apple3';
+UPDATE 1
+postgres=# 
+
+SESSION 1 resume:
+
+postgres=*# table test;
+ strings
+---------
+ mango
+ apple3
+(2 rows)
+
+
+============================= Repeatable READ ==========================
+
+
+SESSION 1:
+
+postgres@localhost:~> psql
+psql (16.6)
+Type "help" for help.
+
+postgres=# BEGIN ISOLATION LEVEL REPEATABLE READ;
+BEGIN
+postgres=*# table test;
+ strings
+---------
+ mango
+ apple4
+(2 rows)
+
+
+SESSION 2:
+
+postgres=# table watch ;
+ num
+-----
+   5
+(1 row)
+
+postgres=# update watch set num = 6;
+UPDATE 1
+postgres=# update watch set num = 7;
+UPDATE 1
+postgres=# table watch ;
+ num
+-----
+   7
+(1 row)
+
+postgres=# update watch set num = 9;
+UPDATE 1
+postgres=# update watch set num = 10;
+UPDATE 1
+postgres=# update watch set num = 11;
+UPDATE 1
+postgres=# update watch set num = 12;
+UPDATE 1
+postgres=# table watch ;
+ num
+-----
+  12
+(1 row)
+
+postgres=#
+
+
+SESSION 1 resume:
+
+postgres=*# table watch ;
+ num
+-----
+   5
+(1 row)
+
+postgres=*#
+ 

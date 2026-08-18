@@ -1,0 +1,809 @@
+# Test
+# Test Name: Copy the datadir without pg_start_backup() in between 2 checkpoints
+
+Using username "root".
+Keyboard-interactive authentication prompts from server:
+| Password:
+End of keyboard-interactive prompts from server
+Last login: Tue Aug 11 01:17:56 2026
+localhost:~ #
+localhost:~ # ps -ef|grep -i postgres
+root      1764  1718  0 22:37 pts/0    00:00:00 grep --color=auto -i postgres
+localhost:~ #
+localhost:~ # su - postgres
+postgres@localhost:~> psql -V
+psql (PostgreSQL) 16.6
+postgres@localhost:~> cd /home/postgres/
+postgres@localhost:/home/postgres> ls -lrt
+total 8
+-rw-------  1 postgres postgres  187 Mar 11 01:47 logfile
+drwx------ 20 postgres postgres 4096 Aug 11 01:09 data16
+postgres@localhost:/home/postgres> pg_ctl -V
+pg_ctl (PostgreSQL) 16.6
+postgres@localhost:/home/postgres> pg_ctl start -D data16/
+waiting for server to start....2026-08-18 22:38:04.128 IST   [1836]LOG:  redirecting log output to logging collector process
+2026-08-18 22:38:04.128 IST   [1836]HINT:  Future log output will appear in directory "log".
+ done
+server started
+postgres@localhost:/home/postgres> du -sh data16/
+55M     data16/
+postgres@localhost:/home/postgres>
+postgres@localhost:/home/postgres> psql
+psql (16.6)
+Type "help" for help.
+
+postgres=# select name,setting,context from pg_settings where name ilike '%checkpoint%';
+             name             | setting | context
+------------------------------+---------+---------
+ checkpoint_completion_target | 0.9     | sighup
+ checkpoint_flush_after       | 32      | sighup
+ checkpoint_timeout           | 300     | sighup
+ checkpoint_warning           | 30      | sighup
+ log_checkpoints              | on      | sighup
+(5 rows)
+
+postgres=# alter system set checkpoint_timeout = 900;
+ALTER SYSTEM
+postgres=# select pg_reload_conf();
+ pg_reload_conf
+----------------
+ t
+(1 row)
+
+postgres=#
+postgres=# \dt
+        List of relations
+ Schema | Name | Type  |  Owner
+--------+------+-------+----------
+ public | test | table | postgres
+(1 row)
+
+postgres=# table test;
+  strings
+-----------
+ test123
+ test_some
+ testname
+ test9
+(4 rows)
+
+postgres=# \q
+postgres@localhost:/home/postgres> cp -a data16 data16_duplicate
+postgres@localhost:/home/postgres> du -sh *
+55M     data16
+55M     data16_duplicate
+4.0K    logfile
+postgres@localhost:/home/postgres> psql
+psql (16.6)
+Type "help" for help.
+
+postgres=# table test ;
+  strings
+-----------
+ test123
+ test_some
+ testname
+ test9
+(4 rows)
+
+postgres=# truncate test;
+TRUNCATE TABLE
+postgres=# table test ;
+ strings
+---------
+(0 rows)
+
+postgres=# checkpoint;
+CHECKPOINT
+postgres=# \q
+postgres@localhost:/home/postgres>
+postgres@localhost:/home/postgres> ls -lrt
+total 12
+-rw-------  1 postgres postgres  187 Mar 11 01:47 logfile
+drwx------ 20 postgres postgres 4096 Aug 18 22:39 data16_duplicate
+drwx------ 20 postgres postgres 4096 Aug 18 22:39 data16
+postgres@localhost:/home/postgres> cd data16
+postgres@localhost:/home/postgres/data16> cd ..
+postgres@localhost:/home/postgres> ls -l data16/pg_wal/
+total 16384
+-rw------- 1 postgres postgres 16777216 Aug 18 22:42 000000010000000000000008
+drwx------ 2 postgres postgres        6 Jul 27 19:40 archive_status
+postgres@localhost:/home/postgres> ls -l data16_duplicate/pg_wal/
+total 16384
+-rw------- 1 postgres postgres 16777216 Aug 18 22:38 000000010000000000000008
+drwx------ 2 postgres postgres        6 Jul 27 19:40 archive_status
+postgres@localhost:/home/postgres> cp data16_duplicate/pg_wal/000000010000000000000008 data16_duplicate/pg_wal/000000010000000000000008_BKP
+postgres@localhost:/home/postgres>
+postgres@localhost:/home/postgres> cp -a data16_duplicate/pg_wal/000000010000000000000008 data16_duplicate/pg_wal/000000010000000000000008_BKP
+postgres@localhost:/home/postgres> cp -ai data16_duplicate/pg_wal/000000010000000000000008 data16_duplicate/pg_wal/000000010000000000000008_BKP
+cp: overwrite 'data16_duplicate/pg_wal/000000010000000000000008_BKP'? y
+postgres@localhost:/home/postgres> cp -ai data16/pg_wal/000000010000000000000008 data16_duplicate/pg_wal/
+cp: overwrite 'data16_duplicate/pg_wal/000000010000000000000008'? y
+postgres@localhost:/home/postgres>
+postgres@localhost:/home/postgres>
+postgres@localhost:/home/postgres> ls -lrt
+total 12
+-rw-------  1 postgres postgres  187 Mar 11 01:47 logfile
+drwx------ 20 postgres postgres 4096 Aug 18 22:39 data16_duplicate
+drwx------ 20 postgres postgres 4096 Aug 18 22:39 data16
+postgres@localhost:/home/postgres> cp -a data16_duplicate/ data16_duplicate_TEMPLATE
+postgres@localhost:/home/postgres>
+postgres@localhost:/home/postgres> pg_ctl start -D data16_duplicate
+pg_ctl: another server might be running; trying to start server anyway
+waiting for server to start....2026-08-18 22:44:17.166 IST   [2236]FATAL:  lock file "postmaster.pid" already exists
+2026-08-18 22:44:17.166 IST   [2236]HINT:  Is another postmaster (PID 1836) running in data directory "/home/postgres/data16_duplicate"?
+ stopped waiting
+pg_ctl: could not start server
+Examine the log output.
+postgres@localhost:/home/postgres>
+postgres@localhost:/home/postgres> cd data16_duplicate
+postgres@localhost:/home/postgres/data16_duplicate> ls -lrt
+total 72
+-rw------- 1 postgres postgres     3 Jul 27 19:40 PG_VERSION
+drwx------ 2 postgres postgres     6 Jul 27 19:40 pg_twophase
+drwx------ 2 postgres postgres     6 Jul 27 19:40 pg_tblspc
+drwx------ 2 postgres postgres     6 Jul 27 19:40 pg_stat_tmp
+drwx------ 2 postgres postgres     6 Jul 27 19:40 pg_snapshots
+drwx------ 2 postgres postgres     6 Jul 27 19:40 pg_serial
+drwx------ 2 postgres postgres     6 Jul 27 19:40 pg_replslot
+drwx------ 2 postgres postgres     6 Jul 27 19:40 pg_notify
+drwx------ 2 postgres postgres     6 Jul 27 19:40 pg_dynshmem
+drwx------ 2 postgres postgres     6 Jul 27 19:40 pg_commit_ts
+-rw------- 1 postgres postgres 29740 Jul 27 19:40 postgresql.conf
+-rw------- 1 postgres postgres  2640 Jul 27 19:40 pg_ident.conf
+-rw------- 1 postgres postgres  5711 Jul 27 19:40 pg_hba.conf
+drwx------ 2 postgres postgres    18 Jul 27 19:40 pg_subtrans
+drwx------ 2 postgres postgres    18 Jul 27 19:40 pg_xact
+drwx------ 4 postgres postgres    36 Jul 27 19:40 pg_multixact
+-rwx------ 1 postgres postgres    42 Jul 27 19:40 delete_old_cluster.sh
+drwx------ 7 postgres postgres    59 Jul 27 21:51 base
+drwx------ 4 postgres postgres    68 Aug 11 01:09 pg_logical
+drwx------ 2 postgres postgres   286 Aug 18 22:38 log
+-rw------- 1 postgres postgres    49 Aug 18 22:38 postmaster.opts
+drwx------ 2 postgres postgres     6 Aug 18 22:38 pg_stat
+-rw------- 1 postgres postgres    98 Aug 18 22:38 postmaster.pid
+drwx------ 2 postgres postgres  4096 Aug 18 22:38 global
+-rw------- 1 postgres postgres   115 Aug 18 22:39 postgresql.auto.conf
+-rw------- 1 postgres postgres    44 Aug 18 22:39 current_logfiles
+drwx------ 3 postgres postgres    96 Aug 18 22:42 pg_wal
+postgres@localhost:/home/postgres/data16_duplicate> cat postmaster.opts
+/usr/lib/postgresql16/bin/postgres "-D" "data16"
+postgres@localhost:/home/postgres/data16_duplicate> ls -lrt ../data16
+total 72
+-rw------- 1 postgres postgres     3 Jul 27 19:40 PG_VERSION
+drwx------ 2 postgres postgres     6 Jul 27 19:40 pg_twophase
+drwx------ 2 postgres postgres     6 Jul 27 19:40 pg_tblspc
+drwx------ 2 postgres postgres     6 Jul 27 19:40 pg_stat_tmp
+drwx------ 2 postgres postgres     6 Jul 27 19:40 pg_snapshots
+drwx------ 2 postgres postgres     6 Jul 27 19:40 pg_serial
+drwx------ 2 postgres postgres     6 Jul 27 19:40 pg_replslot
+drwx------ 2 postgres postgres     6 Jul 27 19:40 pg_notify
+drwx------ 2 postgres postgres     6 Jul 27 19:40 pg_dynshmem
+drwx------ 2 postgres postgres     6 Jul 27 19:40 pg_commit_ts
+-rw------- 1 postgres postgres 29740 Jul 27 19:40 postgresql.conf
+-rw------- 1 postgres postgres  2640 Jul 27 19:40 pg_ident.conf
+-rw------- 1 postgres postgres  5711 Jul 27 19:40 pg_hba.conf
+drwx------ 2 postgres postgres    18 Jul 27 19:40 pg_subtrans
+drwx------ 2 postgres postgres    18 Jul 27 19:40 pg_xact
+drwx------ 4 postgres postgres    36 Jul 27 19:40 pg_multixact
+drwx------ 3 postgres postgres    60 Jul 27 19:40 pg_wal
+-rwx------ 1 postgres postgres    42 Jul 27 19:40 delete_old_cluster.sh
+drwx------ 7 postgres postgres    59 Jul 27 21:51 base
+drwx------ 2 postgres postgres   286 Aug 18 22:38 log
+-rw------- 1 postgres postgres    49 Aug 18 22:38 postmaster.opts
+drwx------ 2 postgres postgres     6 Aug 18 22:38 pg_stat
+-rw------- 1 postgres postgres    98 Aug 18 22:38 postmaster.pid
+drwx------ 2 postgres postgres  4096 Aug 18 22:38 global
+-rw------- 1 postgres postgres   115 Aug 18 22:39 postgresql.auto.conf
+-rw------- 1 postgres postgres    44 Aug 18 22:39 current_logfiles
+drwx------ 4 postgres postgres    68 Aug 18 22:41 pg_logical
+postgres@localhost:/home/postgres/data16_duplicate> ps -ef|grpe postgres
+If 'grpe' is not a typo you can use command-not-found to lookup the package that contains it, like this:
+    cnf grpe
+postgres@localhost:/home/postgres/data16_duplicate> ls -lrt|grep postgres
+-rw------- 1 postgres postgres     3 Jul 27 19:40 PG_VERSION
+drwx------ 2 postgres postgres     6 Jul 27 19:40 pg_twophase
+drwx------ 2 postgres postgres     6 Jul 27 19:40 pg_tblspc
+drwx------ 2 postgres postgres     6 Jul 27 19:40 pg_stat_tmp
+drwx------ 2 postgres postgres     6 Jul 27 19:40 pg_snapshots
+drwx------ 2 postgres postgres     6 Jul 27 19:40 pg_serial
+drwx------ 2 postgres postgres     6 Jul 27 19:40 pg_replslot
+drwx------ 2 postgres postgres     6 Jul 27 19:40 pg_notify
+drwx------ 2 postgres postgres     6 Jul 27 19:40 pg_dynshmem
+drwx------ 2 postgres postgres     6 Jul 27 19:40 pg_commit_ts
+-rw------- 1 postgres postgres 29740 Jul 27 19:40 postgresql.conf
+-rw------- 1 postgres postgres  2640 Jul 27 19:40 pg_ident.conf
+-rw------- 1 postgres postgres  5711 Jul 27 19:40 pg_hba.conf
+drwx------ 2 postgres postgres    18 Jul 27 19:40 pg_subtrans
+drwx------ 2 postgres postgres    18 Jul 27 19:40 pg_xact
+drwx------ 4 postgres postgres    36 Jul 27 19:40 pg_multixact
+-rwx------ 1 postgres postgres    42 Jul 27 19:40 delete_old_cluster.sh
+drwx------ 7 postgres postgres    59 Jul 27 21:51 base
+drwx------ 4 postgres postgres    68 Aug 11 01:09 pg_logical
+drwx------ 2 postgres postgres   286 Aug 18 22:38 log
+-rw------- 1 postgres postgres    49 Aug 18 22:38 postmaster.opts
+drwx------ 2 postgres postgres     6 Aug 18 22:38 pg_stat
+-rw------- 1 postgres postgres    98 Aug 18 22:38 postmaster.pid
+drwx------ 2 postgres postgres  4096 Aug 18 22:38 global
+-rw------- 1 postgres postgres   115 Aug 18 22:39 postgresql.auto.conf
+-rw------- 1 postgres postgres    44 Aug 18 22:39 current_logfiles
+drwx------ 3 postgres postgres    96 Aug 18 22:42 pg_wal
+postgres@localhost:/home/postgres/data16_duplicate> ps -ef|grep postgres
+root      1765  1718  0 22:37 pts/0    00:00:00 su - postgres
+postgres  1766  1765  0 22:37 pts/0    00:00:01 -bash
+postgres  1836     1  0 22:38 ?        00:00:00 /usr/lib/postgresql16/bin/postgres -D data16
+postgres  1837  1836  0 22:38 ?        00:00:00 postgres: logger
+postgres  1838  1836  0 22:38 ?        00:00:00 postgres: checkpointer
+postgres  1839  1836  0 22:38 ?        00:00:00 postgres: background writer
+postgres  1841  1836  0 22:38 ?        00:00:00 postgres: walwriter
+postgres  1842  1836  0 22:38 ?        00:00:00 postgres: autovacuum launcher
+postgres  1843  1836  0 22:38 ?        00:00:00 postgres: logical replication launcher
+postgres  2296  1766  0 22:45 pts/0    00:00:00 ps -ef
+postgres  2297  1766  0 22:45 pts/0    00:00:00 grep --color=auto postgres
+postgres@localhost:/home/postgres/data16_duplicate> pg_ctl stop ../data16
+pg_ctl: too many command-line arguments (first is "stop")
+Try "pg_ctl --help" for more information.
+postgres@localhost:/home/postgres/data16_duplicate> pg_ctl stop -D ../data16
+waiting for server to shut down.... done
+server stopped
+postgres@localhost:/home/postgres/data16_duplicate> ls -lrt ../data16
+total 68
+-rw------- 1 postgres postgres     3 Jul 27 19:40 PG_VERSION
+drwx------ 2 postgres postgres     6 Jul 27 19:40 pg_twophase
+drwx------ 2 postgres postgres     6 Jul 27 19:40 pg_tblspc
+drwx------ 2 postgres postgres     6 Jul 27 19:40 pg_stat_tmp
+drwx------ 2 postgres postgres     6 Jul 27 19:40 pg_snapshots
+drwx------ 2 postgres postgres     6 Jul 27 19:40 pg_serial
+drwx------ 2 postgres postgres     6 Jul 27 19:40 pg_replslot
+drwx------ 2 postgres postgres     6 Jul 27 19:40 pg_notify
+drwx------ 2 postgres postgres     6 Jul 27 19:40 pg_dynshmem
+drwx------ 2 postgres postgres     6 Jul 27 19:40 pg_commit_ts
+-rw------- 1 postgres postgres 29740 Jul 27 19:40 postgresql.conf
+-rw------- 1 postgres postgres  2640 Jul 27 19:40 pg_ident.conf
+-rw------- 1 postgres postgres  5711 Jul 27 19:40 pg_hba.conf
+drwx------ 2 postgres postgres    18 Jul 27 19:40 pg_subtrans
+drwx------ 2 postgres postgres    18 Jul 27 19:40 pg_xact
+drwx------ 4 postgres postgres    36 Jul 27 19:40 pg_multixact
+drwx------ 3 postgres postgres    60 Jul 27 19:40 pg_wal
+-rwx------ 1 postgres postgres    42 Jul 27 19:40 delete_old_cluster.sh
+drwx------ 7 postgres postgres    59 Jul 27 21:51 base
+drwx------ 2 postgres postgres   286 Aug 18 22:38 log
+-rw------- 1 postgres postgres    49 Aug 18 22:38 postmaster.opts
+drwx------ 2 postgres postgres  4096 Aug 18 22:38 global
+-rw------- 1 postgres postgres   115 Aug 18 22:39 postgresql.auto.conf
+-rw------- 1 postgres postgres    44 Aug 18 22:39 current_logfiles
+drwx------ 4 postgres postgres    68 Aug 18 22:46 pg_logical
+drwx------ 2 postgres postgres    25 Aug 18 22:46 pg_stat
+postgres@localhost:/home/postgres/data16_duplicate> ls -lrt
+total 72
+-rw------- 1 postgres postgres     3 Jul 27 19:40 PG_VERSION
+drwx------ 2 postgres postgres     6 Jul 27 19:40 pg_twophase
+drwx------ 2 postgres postgres     6 Jul 27 19:40 pg_tblspc
+drwx------ 2 postgres postgres     6 Jul 27 19:40 pg_stat_tmp
+drwx------ 2 postgres postgres     6 Jul 27 19:40 pg_snapshots
+drwx------ 2 postgres postgres     6 Jul 27 19:40 pg_serial
+drwx------ 2 postgres postgres     6 Jul 27 19:40 pg_replslot
+drwx------ 2 postgres postgres     6 Jul 27 19:40 pg_notify
+drwx------ 2 postgres postgres     6 Jul 27 19:40 pg_dynshmem
+drwx------ 2 postgres postgres     6 Jul 27 19:40 pg_commit_ts
+-rw------- 1 postgres postgres 29740 Jul 27 19:40 postgresql.conf
+-rw------- 1 postgres postgres  2640 Jul 27 19:40 pg_ident.conf
+-rw------- 1 postgres postgres  5711 Jul 27 19:40 pg_hba.conf
+drwx------ 2 postgres postgres    18 Jul 27 19:40 pg_subtrans
+drwx------ 2 postgres postgres    18 Jul 27 19:40 pg_xact
+drwx------ 4 postgres postgres    36 Jul 27 19:40 pg_multixact
+-rwx------ 1 postgres postgres    42 Jul 27 19:40 delete_old_cluster.sh
+drwx------ 7 postgres postgres    59 Jul 27 21:51 base
+drwx------ 4 postgres postgres    68 Aug 11 01:09 pg_logical
+drwx------ 2 postgres postgres   286 Aug 18 22:38 log
+-rw------- 1 postgres postgres    49 Aug 18 22:38 postmaster.opts
+drwx------ 2 postgres postgres     6 Aug 18 22:38 pg_stat
+-rw------- 1 postgres postgres    98 Aug 18 22:38 postmaster.pid
+drwx------ 2 postgres postgres  4096 Aug 18 22:38 global
+-rw------- 1 postgres postgres   115 Aug 18 22:39 postgresql.auto.conf
+-rw------- 1 postgres postgres    44 Aug 18 22:39 current_logfiles
+drwx------ 3 postgres postgres    96 Aug 18 22:42 pg_wal
+postgres@localhost:/home/postgres/data16_duplicate> rm postmaster.pid
+postgres@localhost:/home/postgres/data16_duplicate> cd ..
+postgres@localhost:/home/postgres> pg_ctl start -D data16_duplicate
+waiting for server to start....2026-08-18 22:46:50.538 IST   [2345]LOG:  redirecting log output to logging collector process
+2026-08-18 22:46:50.538 IST   [2345]HINT:  Future log output will appear in directory "log".
+....... done
+server started
+postgres@localhost:/home/postgres> cd data16_duplicate/log/
+postgres@localhost:/home/postgres/data16_duplicate/log> ls -lrt
+total 32
+-rw------- 1 postgres postgres 1137 Jul 27 19:40 postgresql-2026-07-27_194029.log
+-rw------- 1 postgres postgres 1143 Jul 27 19:40 postgresql-2026-07-27_194052.log
+-rw------- 1 postgres postgres 1906 Jul 27 19:40 postgresql-2026-07-27_194053.log
+-rw------- 1 postgres postgres 1138 Jul 27 19:40 postgresql-2026-07-27_194054.log
+-rw------- 1 postgres postgres 2984 Jul 27 22:37 postgresql-2026-07-27_205113.log
+-rw------- 1 postgres postgres 3678 Aug 11 01:09 postgresql-2026-08-11_005616.log
+-rw------- 1 postgres postgres  778 Aug 18 22:39 postgresql-2026-08-18_223804.log
+-rw------- 1 postgres postgres 1419 Aug 18 22:46 postgresql-2026-08-18_224650.log
+postgres@localhost:/home/postgres/data16_duplicate/log> cat postgresql-2026-08-18_224650.log
+2026-08-18 22:46:50.540 IST   [2345]LOG:  starting PostgreSQL 16.6 on x86_64-suse-linux-gnu, compiled by gcc (SUSE Linux) 7.5.0, 64-bit
+2026-08-18 22:46:50.568 IST   [2345]LOG:  listening on IPv6 address "::1", port 5432
+2026-08-18 22:46:50.569 IST   [2345]LOG:  listening on IPv4 address "127.0.0.1", port 5432
+2026-08-18 22:46:50.629 IST   [2345]LOG:  listening on Unix socket "/run/postgresql/.s.PGSQL.5432"
+2026-08-18 22:46:50.698 IST   [2349]LOG:  database system was interrupted; last known up at 2026-08-18 22:38:04 IST
+2026-08-18 22:46:57.978 IST   [2349]LOG:  database system was not properly shut down; automatic recovery in progress
+2026-08-18 22:46:57.999 IST   [2349]LOG:  redo starts at 0/88180E0
+2026-08-18 22:46:58.002 IST   [2349]LOG:  invalid record length at 0/881C190: expected at least 24, got 0
+2026-08-18 22:46:58.002 IST   [2349]LOG:  redo done at 0/881C158 system usage: CPU: user: 0.00 s, system: 0.00 s, elapsed: 0.00 s
+2026-08-18 22:46:58.024 IST   [2347]LOG:  checkpoint starting: end-of-recovery immediate wait
+2026-08-18 22:46:58.238 IST   [2347]LOG:  checkpoint complete: wrote 8 buffers (0.0%); 0 WAL file(s) added, 0 removed, 0 recycled; write=0.006 s, sync=0.162 s, total=0.225 s; sync files=9, longest=0.067 s, average=0.018 s; distance=16 kB, estimate=16 kB; lsn=0/881C190, redo lsn=0/881C190
+2026-08-18 22:46:58.262 IST   [2345]LOG:  database system is ready to accept connections
+postgres@localhost:/home/postgres/data16_duplicate/log>
+postgres@localhost:/home/postgres/data16_duplicate/log> psql
+psql (16.6)
+Type "help" for help.
+
+postgres=# table test ;
+ strings
+---------
+(0 rows)
+
+postgres=# \q
+postgres@localhost:/home/postgres/data16_duplicate/log> cd ..
+postgres@localhost:/home/postgres/data16_duplicate> cd ..
+postgres@localhost:/home/postgres> ls -lrt
+total 16
+-rw-------  1 postgres postgres  187 Mar 11 01:47 logfile
+drwx------ 20 postgres postgres 4096 Aug 18 22:39 data16_duplicate_TEMPLATE
+drwx------ 20 postgres postgres 4096 Aug 18 22:46 data16
+drwx------ 20 postgres postgres 4096 Aug 18 22:46 data16_duplicate
+postgres@localhost:/home/postgres> ps -ef|grep postgres
+root      1765  1718  0 22:37 pts/0    00:00:00 su - postgres
+postgres  1766  1765  0 22:37 pts/0    00:00:02 -bash
+postgres  2345     1  0 22:46 ?        00:00:00 /usr/lib/postgresql16/bin/postgres -D data16_duplicate
+postgres  2346  2345  0 22:46 ?        00:00:00 postgres: logger
+postgres  2347  2345  0 22:46 ?        00:00:00 postgres: checkpointer
+postgres  2348  2345  0 22:46 ?        00:00:00 postgres: background writer
+postgres  2350  2345  0 22:46 ?        00:00:00 postgres: walwriter
+postgres  2351  2345  0 22:46 ?        00:00:00 postgres: autovacuum launcher
+postgres  2352  2345  0 22:46 ?        00:00:00 postgres: logical replication launcher
+postgres  2409     1  3 22:49 ?        00:00:00 /usr/lib/systemd/systemd --user
+postgres  2410  2409  0 22:49 ?        00:00:00 (sd-pam)
+postgres  2429  1766 99 22:49 pts/0    00:00:00 ps -ef
+postgres  2430  1766  0 22:49 pts/0    00:00:00 grep --color=auto postgres
+postgres@localhost:/home/postgres> pg_ctl stop -D data16_duplicate
+waiting for server to shut down.... done
+server stopped
+postgres@localhost:/home/postgres> cp -a data16 data16_TEMPLATE
+postgres@localhost:/home/postgres> ls -lrt
+total 20
+-rw-------  1 postgres postgres  187 Mar 11 01:47 logfile
+drwx------ 20 postgres postgres 4096 Aug 18 22:39 data16_duplicate_TEMPLATE
+drwx------ 20 postgres postgres 4096 Aug 18 22:46 data16_TEMPLATE
+drwx------ 20 postgres postgres 4096 Aug 18 22:46 data16
+drwx------ 20 postgres postgres 4096 Aug 18 22:49 data16_duplicate
+postgres@localhost:/home/postgres> pg_ctl start -D data16
+waiting for server to start....2026-08-18 22:49:43.754 IST   [2448]LOG:  redirecting log output to logging collector process
+2026-08-18 22:49:43.754 IST   [2448]HINT:  Future log output will appear in directory "log".
+ done
+server started
+postgres@localhost:/home/postgres> psql
+psql (16.6)
+Type "help" for help.
+
+postgres=# BEGIN;
+BEGIN
+postgres=*# insert into test values ('apple');
+INSERT 0 1
+postgres=*# ^Z
+[1]+  Stopped                 psql
+postgres@localhost:/home/postgres> jobs
+[1]+  Stopped                 psql
+postgres@localhost:/home/postgres> ps -ef|grep postgres
+root      1765  1718  0 22:37 pts/0    00:00:00 su - postgres
+postgres  1766  1765  0 22:37 pts/0    00:00:02 -bash
+postgres  2448     1  0 22:49 ?        00:00:00 /usr/lib/postgresql16/bin/postgres -D data16
+postgres  2449  2448  0 22:49 ?        00:00:00 postgres: logger
+postgres  2450  2448  0 22:49 ?        00:00:00 postgres: checkpointer
+postgres  2451  2448  0 22:49 ?        00:00:00 postgres: background writer
+postgres  2453  2448  0 22:49 ?        00:00:00 postgres: walwriter
+postgres  2454  2448  0 22:49 ?        00:00:00 postgres: autovacuum launcher
+postgres  2455  2448  0 22:49 ?        00:00:00 postgres: logical replication launcher
+postgres  2456  1766  0 22:49 pts/0    00:00:00 psql
+postgres  2457  2448  0 22:49 ?        00:00:00 postgres: postgres postgres [local] idle in transaction
+postgres  2483  1766 99 22:50 pts/0    00:00:00 ps -ef
+postgres  2484  1766  0 22:50 pts/0    00:00:00 grep --color=auto postgres
+postgres@localhost:/home/postgres>
+postgres@localhost:/home/postgres> pg_ctl stop -m immediate -D data16
+waiting for server to shut down.... done
+server stopped
+postgres@localhost:/home/postgres> ps -ef|grep postgres
+root      1765  1718  0 22:37 pts/0    00:00:00 su - postgres
+postgres  1766  1765  0 22:37 pts/0    00:00:02 -bash
+postgres  2456  1766  0 22:49 pts/0    00:00:00 psql
+postgres  2492     1 46 22:51 ?        00:00:00 /usr/lib/systemd/systemd --user
+postgres  2493  2492  0 22:51 ?        00:00:00 (sd-pam)
+postgres  2510  1766 99 22:51 pts/0    00:00:00 ps -ef
+postgres  2511  1766 50 22:51 pts/0    00:00:00 grep --color=auto postgres
+postgres@localhost:/home/postgres> pg_
+pg_amcheck         pg_checksums       pg_dump            pg_receivewal      pg_restore         pg_test_timing     pg_waldump
+pg_archivecleanup  pg_controldata     pg_dumpall         pg_recvlogical     pg_rewind          pg_upgrade
+pg_basebackup      pg_ctl             pg_isready         pg_resetwal        pg_test_fsync      pg_verifybackup
+postgres@localhost:/home/postgres> pg_waldump data16/pg_wal/
+000000010000000000000008  archive_status/
+postgres@localhost:/home/postgres> pg_waldump data16/pg_wal/000000010000000000000008 |tail
+pg_waldump: error: error in WAL record at 0/881C280: invalid record length at 0/881C2B8: expected at least 24, got 0
+rmgr: XLOG        len (rec/tot):     49/   137, tx:       1453, lsn: 0/0881BEB8, prev 0/0881BE78, desc: FPI , blkref #0: rel 1663/5/24587 blk 0 FPW
+rmgr: Transaction len (rec/tot):    266/   266, tx:       1453, lsn: 0/0881BF48, prev 0/0881BEB8, desc: COMMIT 2026-08-18 22:41:27.982856 IST; rels: base/5/24584 base/5/24583 base/5/24580; inval msgs: catcache 55 catcache 54 catcache 55 catcache 54 catcache 55 catcache 54 relcache 24580 relcache 24583 relcache 24584 relcache 24583 relcache 24584
+rmgr: Standby     len (rec/tot):     50/    50, tx:          0, lsn: 0/0881C070, prev 0/0881BF48, desc: RUNNING_XACTS nextXid 1454 latestCompletedXid 1453 oldestRunningXid 1454
+rmgr: Standby     len (rec/tot):     50/    50, tx:          0, lsn: 0/0881C0A8, prev 0/0881C070, desc: RUNNING_XACTS nextXid 1454 latestCompletedXid 1453 oldestRunningXid 1454
+rmgr: XLOG        len (rec/tot):    114/   114, tx:          0, lsn: 0/0881C0E0, prev 0/0881C0A8, desc: CHECKPOINT_ONLINE redo 0/881C0A8; tli 1; prev tli 1; fpw true; xid 0:1454; oid 32777; multi 1; offset 0; oldest xid 716 in DB 16385; oldest multi 1 in DB 16385; oldest/newest commit timestamp xid: 0/0; oldest running xid 1454; online
+rmgr: Standby     len (rec/tot):     50/    50, tx:          0, lsn: 0/0881C158, prev 0/0881C0E0, desc: RUNNING_XACTS nextXid 1454 latestCompletedXid 1453 oldestRunningXid 1454
+rmgr: XLOG        len (rec/tot):    114/   114, tx:          0, lsn: 0/0881C190, prev 0/0881C158, desc: CHECKPOINT_SHUTDOWN redo 0/881C190; tli 1; prev tli 1; fpw true; xid 0:1454; oid 24588; multi 1; offset 0; oldest xid 716 in DB 16385; oldest multi 1 in DB 16385; oldest/newest commit timestamp xid: 0/0; oldest running xid 0; shutdown
+rmgr: Standby     len (rec/tot):     50/    50, tx:          0, lsn: 0/0881C208, prev 0/0881C190, desc: RUNNING_XACTS nextXid 1454 latestCompletedXid 1453 oldestRunningXid 1454
+rmgr: Heap        len (rec/tot):     61/    61, tx:       1454, lsn: 0/0881C240, prev 0/0881C208, desc: INSERT+INIT off: 1, flags: 0x00, blkref #0: rel 1663/5/24585 blk 0
+rmgr: Standby     len (rec/tot):     54/    54, tx:          0, lsn: 0/0881C280, prev 0/0881C240, desc: RUNNING_XACTS nextXid 1455 latestCompletedXid 1453 oldestRunningXid 1454; 1 xacts: 1454
+postgres@localhost:/home/postgres>
+postgres@localhost:/home/postgres> pg_ctl start -D data16
+waiting for server to start....2026-08-18 22:51:56.425 IST   [2534]LOG:  redirecting log output to logging collector process
+2026-08-18 22:51:56.425 IST   [2534]HINT:  Future log output will appear in directory "log".
+........ done
+server started
+postgres@localhost:/home/postgres> cd data16/log/
+postgres@localhost:/home/postgres/data16/log> ls -lrt
+total 36
+-rw------- 1 postgres postgres 1137 Jul 27 19:40 postgresql-2026-07-27_194029.log
+-rw------- 1 postgres postgres 1143 Jul 27 19:40 postgresql-2026-07-27_194052.log
+-rw------- 1 postgres postgres 1906 Jul 27 19:40 postgresql-2026-07-27_194053.log
+-rw------- 1 postgres postgres 1138 Jul 27 19:40 postgresql-2026-07-27_194054.log
+-rw------- 1 postgres postgres 2984 Jul 27 22:37 postgresql-2026-07-27_205113.log
+-rw------- 1 postgres postgres 3678 Aug 11 01:09 postgresql-2026-08-11_005616.log
+-rw------- 1 postgres postgres 1924 Aug 18 22:46 postgresql-2026-08-18_223804.log
+-rw------- 1 postgres postgres  748 Aug 18 22:50 postgresql-2026-08-18_224943.log
+-rw------- 1 postgres postgres 1417 Aug 18 22:52 postgresql-2026-08-18_225156.log
+postgres@localhost:/home/postgres/data16/log>
+postgres@localhost:/home/postgres/data16/log> cat postgresql-2026-08-18_225156.log
+2026-08-18 22:51:56.425 IST   [2534]LOG:  starting PostgreSQL 16.6 on x86_64-suse-linux-gnu, compiled by gcc (SUSE Linux) 7.5.0, 64-bit
+2026-08-18 22:51:56.436 IST   [2534]LOG:  listening on IPv6 address "::1", port 5432
+2026-08-18 22:51:56.436 IST   [2534]LOG:  listening on IPv4 address "127.0.0.1", port 5432
+2026-08-18 22:51:56.463 IST   [2534]LOG:  listening on Unix socket "/run/postgresql/.s.PGSQL.5432"
+2026-08-18 22:51:56.569 IST   [2538]LOG:  database system was interrupted; last known up at 2026-08-18 22:49:43 IST
+2026-08-18 22:52:04.801 IST   [2538]LOG:  database system was not properly shut down; automatic recovery in progress
+2026-08-18 22:52:04.823 IST   [2538]LOG:  redo starts at 0/881C208
+2026-08-18 22:52:04.823 IST   [2538]LOG:  invalid record length at 0/881C2B8: expected at least 24, got 0
+2026-08-18 22:52:04.824 IST   [2538]LOG:  redo done at 0/881C280 system usage: CPU: user: 0.00 s, system: 0.00 s, elapsed: 0.00 s
+2026-08-18 22:52:04.874 IST   [2536]LOG:  checkpoint starting: end-of-recovery immediate wait
+2026-08-18 22:52:04.978 IST   [2536]LOG:  checkpoint complete: wrote 4 buffers (0.0%); 0 WAL file(s) added, 0 removed, 0 recycled; write=0.002 s, sync=0.038 s, total=0.128 s; sync files=3, longest=0.017 s, average=0.013 s; distance=0 kB, estimate=0 kB; lsn=0/881C2B8, redo lsn=0/881C2B8
+2026-08-18 22:52:05.071 IST   [2534]LOG:  database system is ready to accept connections
+postgres@localhost:/home/postgres/data16/log> psql
+psql (16.6)
+Type "help" for help.
+
+postgres=# table test ;
+ strings
+---------
+(0 rows)
+
+postgres=# \q
+postgres@localhost:/home/postgres/data16/log>
+postgres@localhost:/home/postgres/data16/log>
+postgres@localhost:/home/postgres/data16/log> cd ../
+postgres@localhost:/home/postgres/data16> cd ..
+postgres@localhost:/home/postgres> ls -lrt
+total 20
+-rw-------  1 postgres postgres  187 Mar 11 01:47 logfile
+drwx------ 20 postgres postgres 4096 Aug 18 22:39 data16_duplicate_TEMPLATE
+drwx------ 20 postgres postgres 4096 Aug 18 22:46 data16_TEMPLATE
+drwx------ 20 postgres postgres 4096 Aug 18 22:49 data16_duplicate
+drwx------ 20 postgres postgres 4096 Aug 18 22:51 data16
+postgres@localhost:/home/postgres> cp -a data16_duplicate_TEMPLATE data16_duplicate_2
+postgres@localhost:/home/postgres>
+postgres@localhost:/home/postgres> touch recovery.signal data16_duplicate_2
+postgres@localhost:/home/postgres> ls -l data16_duplicate_2/rec*
+ls: cannot access 'data16_duplicate_2/rec*': No such file or directory
+postgres@localhost:/home/postgres> ls -lrt
+total 24
+-rw-------  1 postgres postgres  187 Mar 11 01:47 logfile
+drwx------ 20 postgres postgres 4096 Aug 18 22:39 data16_duplicate_TEMPLATE
+drwx------ 20 postgres postgres 4096 Aug 18 22:46 data16_TEMPLATE
+drwx------ 20 postgres postgres 4096 Aug 18 22:49 data16_duplicate
+drwx------ 20 postgres postgres 4096 Aug 18 22:51 data16
+-rw-r--r--  1 postgres postgres    0 Aug 18 22:54 recovery.signal
+drwx------ 20 postgres postgres 4096 Aug 18 22:54 data16_duplicate_2
+postgres@localhost:/home/postgres> ls -l data16_duplicate_2/
+total 72
+drwx------ 7 postgres postgres    59 Jul 27 21:51 base
+-rw------- 1 postgres postgres    44 Aug 18 22:39 current_logfiles
+-rwx------ 1 postgres postgres    42 Jul 27 19:40 delete_old_cluster.sh
+drwx------ 2 postgres postgres  4096 Aug 18 22:38 global
+drwx------ 2 postgres postgres   286 Aug 18 22:38 log
+drwx------ 2 postgres postgres     6 Jul 27 19:40 pg_commit_ts
+drwx------ 2 postgres postgres     6 Jul 27 19:40 pg_dynshmem
+-rw------- 1 postgres postgres  5711 Jul 27 19:40 pg_hba.conf
+-rw------- 1 postgres postgres  2640 Jul 27 19:40 pg_ident.conf
+drwx------ 4 postgres postgres    68 Aug 11 01:09 pg_logical
+drwx------ 4 postgres postgres    36 Jul 27 19:40 pg_multixact
+drwx------ 2 postgres postgres     6 Jul 27 19:40 pg_notify
+drwx------ 2 postgres postgres     6 Jul 27 19:40 pg_replslot
+drwx------ 2 postgres postgres     6 Jul 27 19:40 pg_serial
+drwx------ 2 postgres postgres     6 Jul 27 19:40 pg_snapshots
+drwx------ 2 postgres postgres     6 Aug 18 22:38 pg_stat
+drwx------ 2 postgres postgres     6 Jul 27 19:40 pg_stat_tmp
+drwx------ 2 postgres postgres    18 Jul 27 19:40 pg_subtrans
+drwx------ 2 postgres postgres     6 Jul 27 19:40 pg_tblspc
+drwx------ 2 postgres postgres     6 Jul 27 19:40 pg_twophase
+-rw------- 1 postgres postgres     3 Jul 27 19:40 PG_VERSION
+drwx------ 3 postgres postgres    96 Aug 18 22:42 pg_wal
+drwx------ 2 postgres postgres    18 Jul 27 19:40 pg_xact
+-rw------- 1 postgres postgres   115 Aug 18 22:39 postgresql.auto.conf
+-rw------- 1 postgres postgres 29740 Jul 27 19:40 postgresql.conf
+-rw------- 1 postgres postgres    49 Aug 18 22:38 postmaster.opts
+-rw------- 1 postgres postgres    98 Aug 18 22:38 postmaster.pid
+postgres@localhost:/home/postgres> ls -lrt
+total 24
+-rw-------  1 postgres postgres  187 Mar 11 01:47 logfile
+drwx------ 20 postgres postgres 4096 Aug 18 22:39 data16_duplicate_TEMPLATE
+drwx------ 20 postgres postgres 4096 Aug 18 22:46 data16_TEMPLATE
+drwx------ 20 postgres postgres 4096 Aug 18 22:49 data16_duplicate
+drwx------ 20 postgres postgres 4096 Aug 18 22:51 data16
+-rw-r--r--  1 postgres postgres    0 Aug 18 22:54 recovery.signal
+drwx------ 20 postgres postgres 4096 Aug 18 22:54 data16_duplicate_2
+postgres@localhost:/home/postgres> mv recovery.signal data16_duplicate_2
+postgres@localhost:/home/postgres> ls -lrt
+total 24
+-rw-------  1 postgres postgres  187 Mar 11 01:47 logfile
+drwx------ 20 postgres postgres 4096 Aug 18 22:39 data16_duplicate_TEMPLATE
+drwx------ 20 postgres postgres 4096 Aug 18 22:46 data16_TEMPLATE
+drwx------ 20 postgres postgres 4096 Aug 18 22:49 data16_duplicate
+drwx------ 20 postgres postgres 4096 Aug 18 22:51 data16
+drwx------ 20 postgres postgres 4096 Aug 18 22:55 data16_duplicate_2
+postgres@localhost:/home/postgres> ls -lrt data16_duplicate_2
+total 72
+-rw------- 1 postgres postgres     3 Jul 27 19:40 PG_VERSION
+drwx------ 2 postgres postgres     6 Jul 27 19:40 pg_twophase
+drwx------ 2 postgres postgres     6 Jul 27 19:40 pg_tblspc
+drwx------ 2 postgres postgres     6 Jul 27 19:40 pg_stat_tmp
+drwx------ 2 postgres postgres     6 Jul 27 19:40 pg_snapshots
+drwx------ 2 postgres postgres     6 Jul 27 19:40 pg_serial
+drwx------ 2 postgres postgres     6 Jul 27 19:40 pg_replslot
+drwx------ 2 postgres postgres     6 Jul 27 19:40 pg_notify
+drwx------ 2 postgres postgres     6 Jul 27 19:40 pg_dynshmem
+drwx------ 2 postgres postgres     6 Jul 27 19:40 pg_commit_ts
+-rw------- 1 postgres postgres 29740 Jul 27 19:40 postgresql.conf
+-rw------- 1 postgres postgres  2640 Jul 27 19:40 pg_ident.conf
+-rw------- 1 postgres postgres  5711 Jul 27 19:40 pg_hba.conf
+drwx------ 2 postgres postgres    18 Jul 27 19:40 pg_subtrans
+drwx------ 2 postgres postgres    18 Jul 27 19:40 pg_xact
+drwx------ 4 postgres postgres    36 Jul 27 19:40 pg_multixact
+-rwx------ 1 postgres postgres    42 Jul 27 19:40 delete_old_cluster.sh
+drwx------ 7 postgres postgres    59 Jul 27 21:51 base
+drwx------ 4 postgres postgres    68 Aug 11 01:09 pg_logical
+drwx------ 2 postgres postgres   286 Aug 18 22:38 log
+-rw------- 1 postgres postgres    49 Aug 18 22:38 postmaster.opts
+drwx------ 2 postgres postgres     6 Aug 18 22:38 pg_stat
+-rw------- 1 postgres postgres    98 Aug 18 22:38 postmaster.pid
+drwx------ 2 postgres postgres  4096 Aug 18 22:38 global
+-rw------- 1 postgres postgres   115 Aug 18 22:39 postgresql.auto.conf
+-rw------- 1 postgres postgres    44 Aug 18 22:39 current_logfiles
+drwx------ 3 postgres postgres    96 Aug 18 22:42 pg_wal
+-rw-r--r-- 1 postgres postgres     0 Aug 18 22:54 recovery.signal
+postgres@localhost:/home/postgres> pg_ctl start -D data16_duplicate_2
+pg_ctl: another server might be running; trying to start server anyway
+waiting for server to start....2026-08-18 22:55:32.686 IST   [2855]LOG:  redirecting log output to logging collector process
+2026-08-18 22:55:32.686 IST   [2855]HINT:  Future log output will appear in directory "log".
+ stopped waiting
+pg_ctl: could not start server
+Examine the log output.
+postgres@localhost:/home/postgres> cd data16_duplicate_2/log
+postgres@localhost:/home/postgres/data16_duplicate_2/log> ls -lrt
+total 32
+-rw------- 1 postgres postgres 1137 Jul 27 19:40 postgresql-2026-07-27_194029.log
+-rw------- 1 postgres postgres 1143 Jul 27 19:40 postgresql-2026-07-27_194052.log
+-rw------- 1 postgres postgres 1906 Jul 27 19:40 postgresql-2026-07-27_194053.log
+-rw------- 1 postgres postgres 1138 Jul 27 19:40 postgresql-2026-07-27_194054.log
+-rw------- 1 postgres postgres 2984 Jul 27 22:37 postgresql-2026-07-27_205113.log
+-rw------- 1 postgres postgres 3678 Aug 11 01:09 postgresql-2026-08-11_005616.log
+-rw------- 1 postgres postgres  778 Aug 18 22:39 postgresql-2026-08-18_223804.log
+-rw------- 1 postgres postgres  852 Aug 18 22:55 postgresql-2026-08-18_225532.log
+postgres@localhost:/home/postgres/data16_duplicate_2/log> cat postgresql-2026-08-18_225532.log
+2026-08-18 22:55:32.687 IST   [2855]LOG:  starting PostgreSQL 16.6 on x86_64-suse-linux-gnu, compiled by gcc (SUSE Linux) 7.5.0, 64-bit
+2026-08-18 22:55:32.694 IST   [2855]LOG:  could not bind IPv6 address "::1": Address already in use
+2026-08-18 22:55:32.694 IST   [2855]HINT:  Is another postmaster already running on port 5432? If not, wait a few seconds and retry.
+2026-08-18 22:55:32.694 IST   [2855]LOG:  could not bind IPv4 address "127.0.0.1": Address already in use
+2026-08-18 22:55:32.694 IST   [2855]HINT:  Is another postmaster already running on port 5432? If not, wait a few seconds and retry.
+2026-08-18 22:55:32.694 IST   [2855]WARNING:  could not create listen socket for "localhost"
+2026-08-18 22:55:32.694 IST   [2855]FATAL:  could not create any TCP/IP sockets
+2026-08-18 22:55:32.696 IST   [2855]LOG:  database system is shut down
+postgres@localhost:/home/postgres/data16_duplicate_2/log>
+postgres@localhost:/home/postgres/data16_duplicate_2/log>
+postgres@localhost:/home/postgres/data16_duplicate_2/log> ps -ef|grep postgres
+root      1765  1718  0 22:37 pts/0    00:00:00 su - postgres
+postgres  1766  1765  0 22:37 pts/0    00:00:03 -bash
+postgres  2456  1766  0 22:49 pts/0    00:00:00 psql
+postgres  2534     1  0 22:51 ?        00:00:00 /usr/lib/postgresql16/bin/postgres -D data16
+postgres  2535  2534  0 22:51 ?        00:00:00 postgres: logger
+postgres  2536  2534  0 22:51 ?        00:00:00 postgres: checkpointer
+postgres  2537  2534  0 22:51 ?        00:00:00 postgres: background writer
+postgres  2549  2534  0 22:52 ?        00:00:00 postgres: walwriter
+postgres  2550  2534  0 22:52 ?        00:00:00 postgres: autovacuum launcher
+postgres  2551  2534  0 22:52 ?        00:00:00 postgres: logical replication launcher
+postgres  2859  1766 99 22:55 pts/0    00:00:00 ps -ef
+postgres  2860  1766  0 22:55 pts/0    00:00:00 grep --color=auto postgres
+postgres@localhost:/home/postgres/data16_duplicate_2/log> pg_ctl stop -D /home/postgres/data16
+waiting for server to shut down.... done
+server stopped
+postgres@localhost:/home/postgres/data16_duplicate_2/log> pg_ctl start -D /home/postgres/data16_duplicate_2/
+waiting for server to start....2026-08-18 22:56:22.052 IST   [2905]LOG:  redirecting log output to logging collector process
+2026-08-18 22:56:22.052 IST   [2905]HINT:  Future log output will appear in directory "log".
+. stopped waiting
+pg_ctl: could not start server
+Examine the log output.
+postgres@localhost:/home/postgres/data16_duplicate_2/log> ls -lrt
+total 36
+-rw------- 1 postgres postgres 1137 Jul 27 19:40 postgresql-2026-07-27_194029.log
+-rw------- 1 postgres postgres 1143 Jul 27 19:40 postgresql-2026-07-27_194052.log
+-rw------- 1 postgres postgres 1906 Jul 27 19:40 postgresql-2026-07-27_194053.log
+-rw------- 1 postgres postgres 1138 Jul 27 19:40 postgresql-2026-07-27_194054.log
+-rw------- 1 postgres postgres 2984 Jul 27 22:37 postgresql-2026-07-27_205113.log
+-rw------- 1 postgres postgres 3678 Aug 11 01:09 postgresql-2026-08-11_005616.log
+-rw------- 1 postgres postgres  778 Aug 18 22:39 postgresql-2026-08-18_223804.log
+-rw------- 1 postgres postgres  852 Aug 18 22:55 postgresql-2026-08-18_225532.log
+-rw------- 1 postgres postgres  887 Aug 18 22:56 postgresql-2026-08-18_225622.log
+postgres@localhost:/home/postgres/data16_duplicate_2/log> cat postgresql-2026-08-18_225622.log
+2026-08-18 22:56:22.053 IST   [2905]LOG:  starting PostgreSQL 16.6 on x86_64-suse-linux-gnu, compiled by gcc (SUSE Linux) 7.5.0, 64-bit
+2026-08-18 22:56:22.054 IST   [2905]LOG:  listening on IPv6 address "::1", port 5432
+2026-08-18 22:56:22.055 IST   [2905]LOG:  listening on IPv4 address "127.0.0.1", port 5432
+2026-08-18 22:56:22.063 IST   [2905]LOG:  listening on Unix socket "/run/postgresql/.s.PGSQL.5432"
+2026-08-18 22:56:22.080 IST   [2909]LOG:  database system was interrupted; last known up at 2026-08-18 22:38:04 IST
+2026-08-18 22:56:23.993 IST   [2909]FATAL:  must specify restore_command when standby mode is not enabled
+2026-08-18 22:56:23.999 IST   [2905]LOG:  startup process (PID 2909) exited with exit code 1
+2026-08-18 22:56:24.000 IST   [2905]LOG:  aborting startup due to startup process failure
+2026-08-18 22:56:24.001 IST   [2905]LOG:  database system is shut down
+postgres@localhost:/home/postgres/data16_duplicate_2/log> echo "restore_command = ''" >> ../postgresql.auto.conf
+postgres@localhost:/home/postgres/data16_duplicate_2/log> pg_ctl start -D /home/postgres/data16_duplicate_2/
+waiting for server to start....2026-08-18 22:57:06.070 IST   [3118]LOG:  redirecting log output to logging collector process
+2026-08-18 22:57:06.070 IST   [3118]HINT:  Future log output will appear in directory "log".
+. stopped waiting
+pg_ctl: could not start server
+Examine the log output.
+postgres@localhost:/home/postgres/data16_duplicate_2/log> ls -lrt
+total 40
+-rw------- 1 postgres postgres 1137 Jul 27 19:40 postgresql-2026-07-27_194029.log
+-rw------- 1 postgres postgres 1143 Jul 27 19:40 postgresql-2026-07-27_194052.log
+-rw------- 1 postgres postgres 1906 Jul 27 19:40 postgresql-2026-07-27_194053.log
+-rw------- 1 postgres postgres 1138 Jul 27 19:40 postgresql-2026-07-27_194054.log
+-rw------- 1 postgres postgres 2984 Jul 27 22:37 postgresql-2026-07-27_205113.log
+-rw------- 1 postgres postgres 3678 Aug 11 01:09 postgresql-2026-08-11_005616.log
+-rw------- 1 postgres postgres  778 Aug 18 22:39 postgresql-2026-08-18_223804.log
+-rw------- 1 postgres postgres  852 Aug 18 22:55 postgresql-2026-08-18_225532.log
+-rw------- 1 postgres postgres  887 Aug 18 22:56 postgresql-2026-08-18_225622.log
+-rw------- 1 postgres postgres  887 Aug 18 22:57 postgresql-2026-08-18_225706.log
+postgres@localhost:/home/postgres/data16_duplicate_2/log> cat postgresql-2026-08-18_225706.log
+2026-08-18 22:57:06.073 IST   [3118]LOG:  starting PostgreSQL 16.6 on x86_64-suse-linux-gnu, compiled by gcc (SUSE Linux) 7.5.0, 64-bit
+2026-08-18 22:57:06.076 IST   [3118]LOG:  listening on IPv6 address "::1", port 5432
+2026-08-18 22:57:06.076 IST   [3118]LOG:  listening on IPv4 address "127.0.0.1", port 5432
+2026-08-18 22:57:06.083 IST   [3118]LOG:  listening on Unix socket "/run/postgresql/.s.PGSQL.5432"
+2026-08-18 22:57:06.099 IST   [3122]LOG:  database system was interrupted; last known up at 2026-08-18 22:38:04 IST
+2026-08-18 22:57:07.871 IST   [3122]FATAL:  must specify restore_command when standby mode is not enabled
+2026-08-18 22:57:07.873 IST   [3118]LOG:  startup process (PID 3122) exited with exit code 1
+2026-08-18 22:57:07.874 IST   [3118]LOG:  aborting startup due to startup process failure
+2026-08-18 22:57:07.874 IST   [3118]LOG:  database system is shut down
+postgres@localhost:/home/postgres/data16_duplicate_2/log>
+postgres@localhost:/home/postgres/data16_duplicate_2/log> cp -a /home/postgres/data16/pg_wal/000000010000000000000008 ../pg_wal/
+postgres@localhost:/home/postgres/data16_duplicate_2/log> cd ..
+postgres@localhost:/home/postgres/data16_duplicate_2> rm recovery.signal
+postgres@localhost:/home/postgres/data16_duplicate_2> vi ../postgresql.auto.conf
+postgres@localhost:/home/postgres/data16_duplicate_2> vi postgresql.auto.conf
+postgres@localhost:/home/postgres/data16_duplicate_2>
+postgres@localhost:/home/postgres/data16_duplicate_2> pg_ctl start -D /home/postgres/data16_duplicate_2/
+waiting for server to start....2026-08-18 23:01:27.195 IST   [3333]LOG:  redirecting log output to logging collector process
+2026-08-18 23:01:27.195 IST   [3333]HINT:  Future log output will appear in directory "log".
+. done
+server started
+postgres@localhost:/home/postgres/data16_duplicate_2> cd log/
+postgres@localhost:/home/postgres/data16_duplicate_2/log> ls -lrt
+total 44
+-rw------- 1 postgres postgres 1137 Jul 27 19:40 postgresql-2026-07-27_194029.log
+-rw------- 1 postgres postgres 1143 Jul 27 19:40 postgresql-2026-07-27_194052.log
+-rw------- 1 postgres postgres 1906 Jul 27 19:40 postgresql-2026-07-27_194053.log
+-rw------- 1 postgres postgres 1138 Jul 27 19:40 postgresql-2026-07-27_194054.log
+-rw------- 1 postgres postgres 2984 Jul 27 22:37 postgresql-2026-07-27_205113.log
+-rw------- 1 postgres postgres 3678 Aug 11 01:09 postgresql-2026-08-11_005616.log
+-rw------- 1 postgres postgres  778 Aug 18 22:39 postgresql-2026-08-18_223804.log
+-rw------- 1 postgres postgres  852 Aug 18 22:55 postgresql-2026-08-18_225532.log
+-rw------- 1 postgres postgres  887 Aug 18 22:56 postgresql-2026-08-18_225622.log
+-rw------- 1 postgres postgres  887 Aug 18 22:57 postgresql-2026-08-18_225706.log
+-rw------- 1 postgres postgres 1419 Aug 18 23:01 postgresql-2026-08-18_230127.log
+postgres@localhost:/home/postgres/data16_duplicate_2/log> cat postgresql-2026-08-18_230127.log
+2026-08-18 23:01:27.196 IST   [3333]LOG:  starting PostgreSQL 16.6 on x86_64-suse-linux-gnu, compiled by gcc (SUSE Linux) 7.5.0, 64-bit
+2026-08-18 23:01:27.198 IST   [3333]LOG:  listening on IPv6 address "::1", port 5432
+2026-08-18 23:01:27.198 IST   [3333]LOG:  listening on IPv4 address "127.0.0.1", port 5432
+2026-08-18 23:01:27.207 IST   [3333]LOG:  listening on Unix socket "/run/postgresql/.s.PGSQL.5432"
+2026-08-18 23:01:27.226 IST   [3337]LOG:  database system was interrupted; last known up at 2026-08-18 22:38:04 IST
+2026-08-18 23:01:29.026 IST   [3337]LOG:  database system was not properly shut down; automatic recovery in progress
+2026-08-18 23:01:29.033 IST   [3337]LOG:  redo starts at 0/88180E0
+2026-08-18 23:01:29.035 IST   [3337]LOG:  invalid record length at 0/881C3E0: expected at least 24, got 0
+2026-08-18 23:01:29.035 IST   [3337]LOG:  redo done at 0/881C368 system usage: CPU: user: 0.00 s, system: 0.00 s, elapsed: 0.00 s
+2026-08-18 23:01:29.048 IST   [3335]LOG:  checkpoint starting: end-of-recovery immediate wait
+2026-08-18 23:01:29.082 IST   [3335]LOG:  checkpoint complete: wrote 9 buffers (0.1%); 0 WAL file(s) added, 0 removed, 0 recycled; write=0.003 s, sync=0.016 s, total=0.042 s; sync files=9, longest=0.005 s, average=0.002 s; distance=16 kB, estimate=16 kB; lsn=0/881C3E0, redo lsn=0/881C3E0
+2026-08-18 23:01:29.093 IST   [3333]LOG:  database system is ready to accept connections
+postgres@localhost:/home/postgres/data16_duplicate_2/log>
+postgres@localhost:/home/postgres/data16_duplicate_2/log> cd ..
+postgres@localhost:/home/postgres/data16_duplicate_2> ls -lrt
+total 76
+-rw------- 1 postgres postgres     3 Jul 27 19:40 PG_VERSION
+drwx------ 2 postgres postgres     6 Jul 27 19:40 pg_twophase
+drwx------ 2 postgres postgres     6 Jul 27 19:40 pg_tblspc
+drwx------ 2 postgres postgres     6 Jul 27 19:40 pg_stat_tmp
+drwx------ 2 postgres postgres     6 Jul 27 19:40 pg_snapshots
+drwx------ 2 postgres postgres     6 Jul 27 19:40 pg_serial
+drwx------ 2 postgres postgres     6 Jul 27 19:40 pg_replslot
+drwx------ 2 postgres postgres     6 Jul 27 19:40 pg_notify
+drwx------ 2 postgres postgres     6 Jul 27 19:40 pg_dynshmem
+drwx------ 2 postgres postgres     6 Jul 27 19:40 pg_commit_ts
+-rw------- 1 postgres postgres 29740 Jul 27 19:40 postgresql.conf
+-rw------- 1 postgres postgres  2640 Jul 27 19:40 pg_ident.conf
+-rw------- 1 postgres postgres  5711 Jul 27 19:40 pg_hba.conf
+drwx------ 2 postgres postgres    18 Jul 27 19:40 pg_subtrans
+drwx------ 2 postgres postgres    18 Jul 27 19:40 pg_xact
+drwx------ 4 postgres postgres    36 Jul 27 19:40 pg_multixact
+-rwx------ 1 postgres postgres    42 Jul 27 19:40 delete_old_cluster.sh
+drwx------ 7 postgres postgres    59 Jul 27 21:51 base
+drwx------ 2 postgres postgres     6 Aug 18 22:38 pg_stat
+drwx------ 3 postgres postgres    96 Aug 18 22:42 pg_wal
+-rw------- 1 postgres postgres   137 Aug 18 23:01 postgresql.auto.conf
+drwx------ 2 postgres postgres  4096 Aug 18 23:01 log
+-rw------- 1 postgres postgres    44 Aug 18 23:01 current_logfiles
+-rw------- 1 postgres postgres    76 Aug 18 23:01 postmaster.opts
+drwx------ 2 postgres postgres  4096 Aug 18 23:01 global
+drwx------ 4 postgres postgres    68 Aug 18 23:01 pg_logical
+-rw------- 1 postgres postgres   110 Aug 18 23:01 postmaster.pid
+postgres@localhost:/home/postgres/data16_duplicate_2> pg_controldata .
+pg_control version number:            1300
+Catalog version number:               202307071
+Database system identifier:           7667209914260334680
+Database cluster state:               in production
+pg_control last modified:             Tue 18 Aug 2026 11:01:29 PM IST
+Latest checkpoint location:           0/881C3E0
+Latest checkpoint's REDO location:    0/881C3E0
+Latest checkpoint's REDO WAL file:    000000010000000000000008
+Latest checkpoint's TimeLineID:       1
+Latest checkpoint's PrevTimeLineID:   1
+Latest checkpoint's full_page_writes: on
+Latest checkpoint's NextXID:          0:1455
+Latest checkpoint's NextOID:          24588
+Latest checkpoint's NextMultiXactId:  1
+Latest checkpoint's NextMultiOffset:  0
+Latest checkpoint's oldestXID:        716
+Latest checkpoint's oldestXID's DB:   16385
+Latest checkpoint's oldestActiveXID:  0
+Latest checkpoint's oldestMultiXid:   1
+Latest checkpoint's oldestMulti's DB: 16385
+Latest checkpoint's oldestCommitTsXid:0
+Latest checkpoint's newestCommitTsXid:0
+Time of latest checkpoint:            Tue 18 Aug 2026 11:01:29 PM IST
+Fake LSN counter for unlogged rels:   0/3E8
+Minimum recovery ending location:     0/0
+Min recovery ending loc's timeline:   0
+Backup start location:                0/0
+Backup end location:                  0/0
+End-of-backup record required:        no
+wal_level setting:                    replica
+wal_log_hints setting:                off
+max_connections setting:              100
+max_worker_processes setting:         8
+max_wal_senders setting:              10
+max_prepared_xacts setting:           0
+max_locks_per_xact setting:           64
+track_commit_timestamp setting:       off
+Maximum data alignment:               8
+Database block size:                  8192
+Blocks per segment of large relation: 131072
+WAL block size:                       8192
+Bytes per WAL segment:                16777216
+Maximum length of identifiers:        64
+Maximum columns in an index:          32
+Maximum size of a TOAST chunk:        1996
+Size of a large-object chunk:         2048
+Date/time type storage:               64-bit integers
+Float8 argument passing:              by value
+Data page checksum version:           0
+Mock authentication nonce:            b506955bd72455b8fe33ca2bccf259a261aefa44d01b77e353fbd7ca1eaeeeed
+postgres@localhost:/home/postgres/data16_duplicate_2> ls -lrt|grep -i control
+postgres@localhost:/home/postgres/data16_duplicate_2>
