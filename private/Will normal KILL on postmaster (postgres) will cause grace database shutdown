@@ -1,7 +1,7 @@
 Will normal KILL on postmaster (postgres) will cause grace database shutdown?
 ===================================================================================
 
-The normal kill did SMART shutdown:
+The normal kill did SMART shutdown (*** check again, in logs i see fast shudown instead of smart):
 
 ```bash
 localhost:/home/postgres/data15/log # tail -4f $(ls -rt|tail -1)
