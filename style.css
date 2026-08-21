@@ -60,6 +60,7 @@ pre {
   }
 }
 
+/*
 #protected {
   display: none;
   opacity: 0;
@@ -71,6 +72,7 @@ pre {
   opacity: 1;
   transform: translateY(-10px);
 }
+*/
 
 .shake {
   animation: shake 0.2s;
