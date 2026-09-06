@@ -33,15 +33,22 @@ Pure wastage of time and efforts.
 The motive is to learn something once, properly, and document it.  
 And whenever needed, quickly reference this knowledge base and move to next topics swiftly.
 
-## Latest Posts of this Month
+## Latest Posts of the Last 3 Months
 
-{% assign now_month = site.time | date: "%Y-%m" %}
+{% assign current_year = site.time | date: "%Y" | plus: 0 %}
+{% assign current_month = site.time | date: "%m" | plus: 0 %}
 
 {% assign filtered_posts = "" | split: "" %}
 
 {% for post in site.posts %}
-  {% assign post_month = post.date | date: "%Y-%m" %}
-  {% if post_month == now_month %}
+  {% assign post_year = post.date | date: "%Y" | plus: 0 %}
+  {% assign post_month = post.date | date: "%m" | plus: 0 %}
+
+  {% assign current_total_months = current_year | times: 12 | plus: current_month %}
+  {% assign post_total_months = post_year | times: 12 | plus: post_month %}
+  {% assign month_difference = current_total_months | minus: post_total_months %}
+
+  {% if month_difference >= 0 and month_difference < 3 %}
     {% unless post.tags and post.tags contains 'wip' %}
       {% assign filtered_posts = filtered_posts | push: post %}
     {% endunless %}
@@ -53,5 +60,5 @@ And whenever needed, quickly reference this knowledge base and move to next topi
 - [{{ post.title }}]({{ post.url }})
 {% endfor %}
 {% else %}
-No new posts in this month. You can search older posts from top navigation panel.
+No new posts in the last 3 months. You can search older posts from top navigation panel.
 {% endif %}
