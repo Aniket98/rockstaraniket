@@ -1,0 +1,190 @@
+#### ORACLE - WTF is Connected to Idle Instance?
+
+Links:
+	|_ 1. [Oracle - Ask Tom - Post 1](https://asktom.oracle.com/ords/f?p=100:11:0::::P11_QUESTION_ID:1631683800346891854)
+	|_ 2. [Oracle - Ask Tom - Post 2](https://asktom.oracle.com/ords/f?p=100%3A11%3A0%3A%3A%3A%3AP11_QUESTION_ID%3A26073847713242)
+	|_ 3. [Book Oracle - 2nd Edition - by Tom Kyte - Thomas Kyte](https://documents.uow.edu.au/~jrg/317sim/ereadings/expert-oracle-database-architecture-2nded.pdf)
+	|_ 4. [Life Course of Tom Kyte and who taught him technical stuff](https://asktom.oracle.com/Misc/what-about-mathematics.html)
+	|_ 5. [BEQ vs IPC](https://asktom.oracle.com/ords/asktom.search?tag=ipc-and-beq-confusion)
+	|_ 6. [BEQ](https://docs.oracle.com/cd/E16338_01/server.112/e56697/ch5.htm#VMSAR466)
+
+
+If you run : sqlplus / as sysdba, you might have often seen this:
+
+```bash
+oracle@localhost:~> sqlplus / as sysdba
+
+SQL*Plus: Release 19.0.0.0.0 - Production on Sun Sep 6 19:04:06 2026
+Version 19.3.0.0.0
+
+Copyright (c) 1982, 2019, Oracle.  All rights reserved.
+
+Connected to an idle instance.
+
+SQL>
+```
+
+The message "Connected to an idle instance."
+
+What is it?
+Many people say that it means oracle instance is not running, and hence it says idle.
+
+But then confusion comes, if no instance is running, then to WHAT Thing it is connecting to?
+Because it clearly says "Connected".
+
+It could have simply said : No instance running.
+But then why the message says connected to idle instance? If the instance was not running, then why is says connnected to idle instance? What does idle mean here?
+
+To answer this question and get clarity, I had to go through Forum Question/Answers on asktom.oracle.com.
+The answers are given by very famous 'Thomas Kyle' AKA 'Tom Kyle'.
+
+I also had to read the sections in his famous book: Expert Oracle Database Architecture
+
+(All the respective links have been shared already at top.)
+
+Now. What's the reality? What's the real technical explanation to understand the message 'Connected to idle instance'?
+Based on the above references of Tom Kyle, here is the explanation:
+
+Let's see the below output first:
+
+```bash
+oracle@localhost:~> echo $ORACLE_SID
+DBNAME
+oracle@localhost:~>
+oracle@localhost:~> ps -ef|grep -i ora|grep -iv pts
+oracle@localhost:~>
+oracle@localhost:~>
+```
+
+Currently, no oracle related processes are running.
+
+Now, let's connect to sqlplus as sysdba.
+
+```bash
+oracle@localhost:~> sqlplus / as sysdba
+
+SQL*Plus: Release 19.0.0.0.0 - Production on Sun Sep 6 21:32:36 2026
+Version 19.3.0.0.0
+
+Copyright (c) 1982, 2019, Oracle.  All rights reserved.
+
+Connected to an idle instance.
+
+SQL>
+
+```
+
+It says : Connected to an idle instance.
+
+Now, let's see what OS level processes are running.
+
+```bash
+oracle@localhost:~> ps -ef|grep -i ora|grep -iv pts
+oracle    9647  9646  0 21:32 ?        00:00:00 oracleDBNAME (DESCRIPTION=(LOCAL=YES)(ADDRESS=(PROTOCOL=beq)))
+oracle@localhost:~>
+```
+
+What this means? This is a Oracle Server Process (Dedicated-Server-Process).
+Using OS Authentication, it approved and directly associated my connection with a dedicated server process (since my 'oracle' OS user is member of group 'dba' it allowed sysdba privilege without any username or password).
+
+It used a local connection using Bequeath (BEQ) protocol.
+To understand what is BEQ protocol, read below official references:
+
+Official [Oracle Doc](https://docs.oracle.com/cd/E16338_01/server.112/e56697/ch5.htm#VMSAR466) says:
+
+```text
+5.9 BEQ Protocol Support
+The Bequeath (BEQ) protocol support is both a communications mechanism and a process-spawning mechanism. To use the BEQ protocol support, the client and the server must be on the same system. A network service name can be specified directly by the user at the command line or on the Login screen. It can also be specified indirectly by using a logical name, such as ORA_DFLT_HOSTSTR.
+
+If a network service name is not specified, then the BEQ protocol support is used. In this case, the BEQ protocol support always uses a dedicated server and the shared server model is never used. This dedicated server is started automatically by the BEQ protocol, which waits for the server process to start and attach to an existing System Global Area (SGA). If the startup of the server process is successful, then the BEQ protocol support provides interprocess communication through HP OpenVMS mailboxes.
+
+An important feature of the BEQ protocol support is that it does not require a listener for its operation. The protocol support is linked to the client tools and directly starts its own server process without outside interaction. However, you can use the BEQ protocol support only when the client program and Oracle Database 11g are installed on the same system. The BEQ protocol support is always installed and always linked to all client tools and to the Oracle Database 11g server.
+```
+
+Another good reference from [asktom](https://asktom.oracle.com/ords/asktom.search?tag=ipc-and-beq-confusion) (by Connor):
+(Who is Connor? After the site's original founder, Tom Kyte, retired from Oracle, Connor McDonald and his colleague Chris Saxon took over the platform. They manage user questions, provide technical insights, and host regular interactive webinars.)
+
+Connor said..
+```text
+The main differences is who does the work
+
+With BEQ, a session is directly established, ie, your applications connection attempt directly launches a copy of the oracle executable as your background session.
+With IPC, the listener is the one that launches the executable and then hands its control over to you (or your application)
+```
+
+Another point, using 'sqlplus / as sysdba' from 'oracle' OS user or a user as member of 'dba' OS group, ignores any username and password.
+
+Here is another [official reference](https://asktom.oracle.com/ords/f?p=100%3A11%3A0%3A%3A%3A%3AP11_QUESTION_ID%3A26073847713242) by Tom Kyle from asktom:
+
+Tom said..
+```text
+connect / as sysdba, the user/pass is utterly ignored using a local connect
+
+ops$tkyte%ORA9IR2> connect / as sysdba
+Connected.
+ops$tkyte%ORA9IR2> connect santa/claus as sysdba
+Connected.
+ops$tkyte%ORA9IR2> connect not_a_user/in_this_database as sysdba
+Connected.
+ops$tkyte%ORA9IR2>
+```
+
+We can even see the proof on our own server:
+
+```bash
+oracle@localhost:~> id oracle
+uid=54321(oracle) gid=54321(oinstall) groups=54322(dba),54321(oinstall)
+oracle@localhost:~>
+oracle@localhost:~> sqlplus i_dont_exist/does_not_matter as sysdba
+
+SQL*Plus: Release 19.0.0.0.0 - Production on Sun Sep 6 21:55:48 2026
+Version 19.3.0.0.0
+
+Copyright (c) 1982, 2019, Oracle.  All rights reserved.
+
+Connected to an idle instance.
+
+SQL> show user;
+USER is "SYS"
+SQL>
+```
+
+As we can see above I used fake non-existing username and password, it ignored that and connected me as 'SYS' user only.
+
+From the famous book of Tom Kyle - [Expert Oracle Database Architecture](https://documents.uow.edu.au/~jrg/317sim/ereadings/expert-oracle-database-architecture-2nded.pdf), here are the few explanation screnshots directly from book:
+
+Image 1:
+![Image 1](/media/images/oracle-post-17-image-a.png)
+
+
+Image 2:
+![Image 2](/media/images/oracle-post-17-image-b.png)
+
+1 important line to notice from above book screenshot is : 
+
+```text
+Our “instance” right now consists solely of the Oracle server process shown in bold in the following 
+output. There is no shared memory allocated yet and no other processes.
+```
+
+Our INSTANCE <---- Focus here.
+consists of solely a SINGLE Server Process <---- Launched via BEQ
+
+In oracle, an instance is a set of processes and memory.
+
+But currently, only a single dedicated server process exists (with no other oracle processes and no shared memory allocated yet).
+
+So, in short, its an incomplete instance.
+It's not the fully initialized oracle instance that we usually work with.
+
+Hence, this instance (incomplete instance) is Sitting IDLE (not doing anything.)
+Our dedicated server process (via BEQ) hence is simply waiting for us to give administrative commands like 'startup' so the oracle instance gets initilazed and comes in running state.
+
+### Conclusion
+
+What does the message 'Connected to Idle Instance' means?
+
+Final Crisp Answer: --> The command 'sqlplus / as sysdba' directly launches a dedicated oracle server process via BEQ. The oracle instance is currently now consisting of this only 1 dedicated oracle server process. There is no other oracle process and shared memory exisitng as of now. Our BEQ connection is hence connected to pre-startup state of oracle instance which is being called IDLE state. Therefore, it says 'Connected to an idle instance.'.
+
+
+-------------------------- xxxxxxxxxxxxxxxxxxxx -----------------------------
