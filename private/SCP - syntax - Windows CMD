@@ -1,0 +1,12 @@
+# Windows CMD - SCP Syntax
+
+# file copy
+scp -P <target_port> <folder> user@host:/path/on/target
+
+# folder copy (flag : -r stands recursive)
+scp -P <target_port> -r <folder> user@host:/path/on/target
+
+# EXAMPLE
+|_ scp -P 6434 pg_hba.conf root@127.0.0.1:/home/postgres/automation
+|_ scp -P 6434 -r postgres_folder root@127.0.0.1:/home/postgres/automation
+
