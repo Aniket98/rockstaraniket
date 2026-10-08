@@ -48,6 +48,7 @@ create_directory() {
 
 create_config() {
     local config="$ROOT/config/pgupgrade.conf"
+
     if [[ -f "$config" ]]; then
         success "Configuration exists: $config"
         return
@@ -56,14 +57,19 @@ create_config() {
     cat > "$config" <<'CFG'
 # PostgreSQL major upgrade configuration
 
-OLD_PG_CONFIG=""
-NEW_PG_CONFIG=""
+PG_OS_USER="postgres"
+
+PG_OLD_VERSION=""
+PG_NEW_VERSION=""
+
+OLD_PG_BIN=""
+NEW_PG_BIN=""
 
 OLD_DATA_DIR=""
 NEW_DATA_DIR=""
 
-PG_SERVICE_NAME="postgresql"
-PG_OS_USER="postgres"
+OLD_PG_SYSTEMCTL_SERVICE_NAME=""
+NEW_PG_SYSTEMCTL_SERVICE_NAME=""
 CFG
 
     success "Configuration created: $config"
@@ -125,24 +131,40 @@ validate_executable() {
 
 validate_config() {
     local config="$ROOT/config/pgupgrade.conf"
+
     [[ -f "$config" ]] || return 1
 
     # shellcheck disable=SC1090
     source "$config"
 
     local required_variables=(
-        OLD_PG_CONFIG
-        NEW_PG_CONFIG
+        PG_OS_USER
+        PG_OLD_VERSION
+        PG_NEW_VERSION
+        OLD_PG_BIN
+        NEW_PG_BIN
         OLD_DATA_DIR
         NEW_DATA_DIR
-        PG_SERVICE_NAME
-        PG_OS_USER
+        OLD_PG_SYSTEMCTL_SERVICE_NAME
+        NEW_PG_SYSTEMCTL_SERVICE_NAME
     )
 
     local variable
+    local value
+
     for variable in "${required_variables[@]}"; do
-        declare -p "$variable" &>/dev/null || return 1
+        if ! declare -p "$variable" &>/dev/null; then
+            return 1
+        fi
+
+        value="${!variable}"
+
+        if [[ -z "$value" ]]; then
+            return 1
+        fi
     done
+
+    return 0
 }
 
 validate() {
@@ -314,7 +336,7 @@ validate() {
     echo
     echo "All framework initialization checks passed."
     echo
-    echo  -e "${GREEN} ========>> You may start performing upgrade activities now!${NC}"
+    echo -e "${GREEN} ========>> You may start performing upgrade activities now!${NC}"
     echo
 }
 
